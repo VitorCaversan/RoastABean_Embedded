@@ -53,3 +53,39 @@ dkms.conf
 
 # debug information files
 *.dwo
+
+# Build output
+/build/
+sdkconfig.old
+
+# VSCode / IDE stuff
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
+.idea/
+*.code-workspace
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# ESP-IDF tools cache
+dist/
+*.egg-info/
+/managed_components/
+
+# CMake build system files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+Makefile
+
+# Generated binaries
+*.elf
+*.bin
+*.map
+
+# Logs
+*.log
