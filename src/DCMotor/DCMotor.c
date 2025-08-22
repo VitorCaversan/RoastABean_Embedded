@@ -1,28 +1,11 @@
-/*
- * SPDX-FileCopyrightText: 2021-2022 Espressif Systems (Shanghai) CO LTD
- *
- * SPDX-License-Identifier: Apache-2.0
- */
+/*******************************************************************************
+ * INCLUDES
+ ******************************************************************************/
+#include "DCMotor.h"
 
-#include <stdio.h>
-#include "sdkconfig.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/queue.h"
-#include "esp_log.h"
-#include "esp_timer.h"
-#include "driver/gpio.h"
-#include "driver/pulse_cnt.h"
-#include "bdc_motor.h"
-#include "pid_ctrl.h"
-#include <max31855.h>
-#include <esp_idf_lib_helpers.h>
-
-static const char *TAG = "example";
-
-// Enable this config,  we will print debug formated string, which in return can be captured and parsed by Serial-Studio
-#define SERIAL_STUDIO_DEBUG           CONFIG_SERIAL_STUDIO_DEBUG
-
+/*******************************************************************************
+ * MACROS AND DEFINES
+ ******************************************************************************/
 #define BDC_MCPWM_TIMER_RESOLUTION_HZ 10000000 // 10MHz, 1 tick = 0.1us
 #define BDC_MCPWM_FREQ_HZ             25000    // 25KHz PWM
 #define BDC_MCPWM_DUTY_TICK_MAX       (BDC_MCPWM_TIMER_RESOLUTION_HZ / BDC_MCPWM_FREQ_HZ) // maximum value we can set for the duty cycle, in ticks
@@ -37,43 +20,25 @@ static const char *TAG = "example";
 #define BDC_PID_LOOP_PERIOD_MS        10   // calculate the motor speed every 10ms
 #define BDC_PID_EXPECT_SPEED          400  // expected motor speed, in the pulses counted by the rotary encoder
 
-typedef struct {
-    bdc_motor_handle_t motor;
-    pcnt_unit_handle_t pcnt_encoder;
-    pid_ctrl_block_handle_t pid_ctrl;
-    int report_pulses;
-} motor_control_context_t;
+/*******************************************************************************
+ * LOCAL FUNCTION DECLARATIONS
+ ******************************************************************************/
+#if DCMOTOR_PID_CTRL_ENABLED
+static void pid_loop_cb(void *args);
+#endif
 
-static void pid_loop_cb(void *args)
+/*******************************************************************************
+ * LOCAL VARIABLES
+ ******************************************************************************/
+static motor_control_context_t motorCtrlCntxt = {0};
+static const char *TAG = "DCMOTOR";
+
+/*******************************************************************************
+ * EXTERNAL FUNCTIONS
+ ******************************************************************************/
+
+extern void DCMotor_initDcMotors(void)
 {
-    static int last_pulse_count = 0;
-    motor_control_context_t *ctx = (motor_control_context_t *)args;
-    pcnt_unit_handle_t pcnt_unit = ctx->pcnt_encoder;
-    pid_ctrl_block_handle_t pid_ctrl = ctx->pid_ctrl;
-    bdc_motor_handle_t motor = ctx->motor;
-
-    // get the result from rotary encoder
-    int cur_pulse_count = 0;
-    pcnt_unit_get_count(pcnt_unit, &cur_pulse_count);
-    int real_pulses = cur_pulse_count - last_pulse_count;
-    last_pulse_count = cur_pulse_count;
-    ctx->report_pulses = real_pulses;
-
-    // calculate the speed error
-    float error = BDC_PID_EXPECT_SPEED - real_pulses;
-    float new_speed = 0;
-
-    // set the new speed
-    pid_compute(pid_ctrl, error, &new_speed);
-    bdc_motor_set_speed(motor, (uint32_t)new_speed);
-}
-
-void app_main(void)
-{
-    static motor_control_context_t motor_ctrl_ctx = {
-        .pcnt_encoder = NULL,
-    };
-
     ESP_LOGI(TAG, "Create DC motor");
     bdc_motor_config_t motor_config = {
         .pwm_freq_hz = BDC_MCPWM_FREQ_HZ,
@@ -86,8 +51,15 @@ void app_main(void)
     };
     bdc_motor_handle_t motor = NULL;
     ESP_ERROR_CHECK(bdc_motor_new_mcpwm_device(&motor_config, &mcpwm_config, &motor));
-    motor_ctrl_ctx.motor = motor;
+    
+    motorCtrlCntxt.motor = motor;
 
+    return;
+}
+
+#if DCMOTOR_PID_CTRL_ENABLED
+extern void DCMotor_initPulseCntrs(void)
+{
     ESP_LOGI(TAG, "Init pcnt driver to decode rotary signal");
     pcnt_unit_config_t unit_config = {
         .high_limit = BDC_ENCODER_PCNT_HIGH_LIMIT,
@@ -121,8 +93,12 @@ void app_main(void)
     ESP_ERROR_CHECK(pcnt_unit_enable(pcnt_unit));
     ESP_ERROR_CHECK(pcnt_unit_clear_count(pcnt_unit));
     ESP_ERROR_CHECK(pcnt_unit_start(pcnt_unit));
-    motor_ctrl_ctx.pcnt_encoder = pcnt_unit;
+    
+    motorCtrlCntxt.pcnt_encoder = pcnt_unit;
+}
 
+extern void DCMotor_initPIDCtrl(void)
+{
     ESP_LOGI(TAG, "Create PID control block");
     pid_ctrl_parameter_t pid_runtime_param = {
         .kp = 0.6,
@@ -139,7 +115,8 @@ void app_main(void)
         .init_param = pid_runtime_param,
     };
     ESP_ERROR_CHECK(pid_new_control_block(&pid_config, &pid_ctrl));
-    motor_ctrl_ctx.pid_ctrl = pid_ctrl;
+
+    motorCtrlCntxt.pid_ctrl = pid_ctrl;
 
     ESP_LOGI(TAG, "Create a timer to do PID calculation periodically");
     const esp_timer_create_args_t periodic_timer_args = {
@@ -158,44 +135,40 @@ void app_main(void)
     ESP_LOGI(TAG, "Start motor speed loop");
     ESP_ERROR_CHECK(esp_timer_start_periodic(pid_loop_timer, BDC_PID_LOOP_PERIOD_MS * 1000));
 
-    // MAX31855 CONFIG
-    max31855_t dev = { 0 };
-    // Configure SPI bus
-    spi_bus_config_t cfg =
-    {
-        .mosi_io_num = -1,
-        .miso_io_num = GPIO_NUM_15,
-        .sclk_io_num = GPIO_NUM_1,
-        .quadwp_io_num = -1,
-        .quadhd_io_num = -1,
-        .max_transfer_sz = 0,
-        .flags = 0
-    };
-    ESP_ERROR_CHECK(spi_bus_initialize(HELPER_SPI_HOST_DEFAULT, &cfg, 1));
-
-    // Init device
-    ESP_ERROR_CHECK(max31855_init_desc(&dev, HELPER_SPI_HOST_DEFAULT, MAX31855_MAX_CLOCK_SPEED_HZ, GPIO_NUM_2));
-
-    float tc_t, cj_t;
-    bool scv, scg, oc;
-
-    while (1) {
-        esp_err_t res = max31855_get_temperature(&dev, &tc_t, &cj_t, &scv, &scg, &oc);
-        if (res != ESP_OK)
-            ESP_LOGE(TAG, "Failed to measure: %d (%s)", res, esp_err_to_name(res));
-        else
-        {
-            if (scv) ESP_LOGW(TAG, "Thermocouple shorted to VCC!");
-            if (scg) ESP_LOGW(TAG, "Thermocouple shorted to GND!");
-            if (oc) ESP_LOGW(TAG, "No connection to thermocouple!");
-            ESP_LOGI(TAG, "Temperature: %.2f°C, cold junction temperature: %.4f°C", tc_t, cj_t);
-        }
-
-        vTaskDelay(pdMS_TO_TICKS(100));
-        // the following logging format is according to the requirement of serial-studio frame format
-        // also see the dashboard config file `serial-studio-dashboard.json` for more information
-#if SERIAL_STUDIO_DEBUG
-        printf("/*%d*/\r\n", motor_ctrl_ctx.report_pulses);
-#endif
-    }
 }
+#endif
+
+extern motor_control_context_t *DCMotor_getContext(void)
+{
+    return &motorCtrlCntxt;
+}
+
+/*******************************************************************************
+ * LOCAL FUNCTIONS
+ ******************************************************************************/
+
+#if DCMOTOR_PID_CTRL_ENABLED
+static void pid_loop_cb(void *args)
+{
+    static int last_pulse_count = 0;
+    motor_control_context_t *ctx = (motor_control_context_t *)args;
+    pcnt_unit_handle_t pcnt_unit = ctx->pcnt_encoder;
+    pid_ctrl_block_handle_t pid_ctrl = ctx->pid_ctrl;
+    bdc_motor_handle_t motor = ctx->motor;
+
+    // get the result from rotary encoder
+    int cur_pulse_count = 0;
+    pcnt_unit_get_count(pcnt_unit, &cur_pulse_count);
+    int real_pulses = cur_pulse_count - last_pulse_count;
+    last_pulse_count = cur_pulse_count;
+    ctx->report_pulses = real_pulses;
+
+    // calculate the speed error
+    float error = BDC_PID_EXPECT_SPEED - real_pulses;
+    float new_speed = 0;
+
+    // set the new speed
+    pid_compute(pid_ctrl, error, &new_speed);
+    bdc_motor_set_speed(motor, (uint32_t)new_speed);
+}
+#endif
