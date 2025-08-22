@@ -12,9 +12,8 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "driver/gpio.h"
-#include <max31855.h>
-#include <esp_idf_lib_helpers.h>
 #include "DCMotor.h"
+#include "TempSens.h"
 
 static const char *TAG = "MAIN";
 
@@ -32,37 +31,27 @@ void app_main(void)
     bdc_motor_enable(motor_ctrl_ctx->motor);
     bdc_motor_forward(motor_ctrl_ctx->motor);
 
-    // MAX31855 CONFIG
-    max31855_t dev = { 0 };
-    // Configure SPI bus
-    spi_bus_config_t cfg =
-    {
-        .mosi_io_num = -1,
-        .miso_io_num = GPIO_NUM_15,
-        .sclk_io_num = GPIO_NUM_1,
-        .quadwp_io_num = -1,
-        .quadhd_io_num = -1,
-        .max_transfer_sz = 0,
-        .flags = 0
-    };
-    ESP_ERROR_CHECK(spi_bus_initialize(HELPER_SPI_HOST_DEFAULT, &cfg, 1));
+    TempSens_init();
 
-    // Init device
-    ESP_ERROR_CHECK(max31855_init_desc(&dev, HELPER_SPI_HOST_DEFAULT, MAX31855_MAX_CLOCK_SPEED_HZ, GPIO_NUM_2));
-
-    float tc_t, cj_t;
-    bool scv, scg, oc;
+    float temp = 0.0f;
 
     while (1) {
-        esp_err_t res = max31855_get_temperature(&dev, &tc_t, &cj_t, &scv, &scg, &oc);
-        if (res != ESP_OK)
-            ESP_LOGE(TAG, "Failed to measure: %d (%s)", res, esp_err_to_name(res));
+        temp = TempSens_getTemperature();
+
+        if (temp < 25.0f)
+        {
+            ESP_LOGI(TAG, "Temperature is below 25°C");
+            bdc_motor_set_speed(motor_ctrl_ctx->motor, 25);
+        }
+        else if (temp < 30.0f)
+        {
+            ESP_LOGI(TAG, "Temperature is below 30°C");
+            bdc_motor_set_speed(motor_ctrl_ctx->motor, 50);
+        }
         else
         {
-            if (scv) ESP_LOGW(TAG, "Thermocouple shorted to VCC!");
-            if (scg) ESP_LOGW(TAG, "Thermocouple shorted to GND!");
-            if (oc) ESP_LOGW(TAG, "No connection to thermocouple!");
-            ESP_LOGI(TAG, "Temperature: %.2f°C, cold junction temperature: %.4f°C", tc_t, cj_t);
+            ESP_LOGI(TAG, "Temperature is above 30°C");
+            bdc_motor_set_speed(motor_ctrl_ctx->motor, 75);
         }
 
         vTaskDelay(pdMS_TO_TICKS(100));
