@@ -5,3 +5,5 @@ dependencies:
     version: '*'
   esp-idf-lib/max31855:
     version: '*'
+  lvgl/lvgl: ^8
+  espressif/esp_lvgl_port: ^2
