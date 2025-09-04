@@ -11,8 +11,6 @@
  * LOCAL FUNCTION DECLARATIONS
  ******************************************************************************/
 
-static void configureSpiBus(void);
-
 /*******************************************************************************
  * LOCAL VARIABLES
  ******************************************************************************/
@@ -27,7 +25,6 @@ static const char *TAG = "TEMP_SENS";
 void TempSens_init(void)
 {
     ESP_LOGI(TAG, "Init MAX31855");
-    configureSpiBus();
     max31855_init_desc(&max31855Module, HELPER_SPI_HOST_DEFAULT, MAX31855_MAX_CLOCK_SPEED_HZ, GPIO_NUM_2);
 }
 
@@ -74,18 +71,3 @@ float TempSens_getColdJunctionTemperature(void)
 /*******************************************************************************
  * LOCAL FUNCTIONS
  ******************************************************************************/
-
-static void configureSpiBus(void)
-{
-    spi_bus_config_t cfg =
-    {
-        .mosi_io_num = -1,
-        .miso_io_num = GPIO_NUM_15,
-        .sclk_io_num = GPIO_NUM_1,
-        .quadwp_io_num = -1,
-        .quadhd_io_num = -1,
-        .max_transfer_sz = 0,
-        .flags = 0
-    };
-    ESP_ERROR_CHECK(spi_bus_initialize(HELPER_SPI_HOST_DEFAULT, &cfg, 1));
-}

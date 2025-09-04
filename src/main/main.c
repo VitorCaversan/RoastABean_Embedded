@@ -14,6 +14,7 @@
 #include "driver/gpio.h"
 #include "DCMotor.h"
 #include "TempSens.h"
+#include "SpiConfig.h"
 
 static const char *TAG = "MAIN";
 
@@ -31,6 +32,7 @@ void app_main(void)
     bdc_motor_enable(motor_ctrl_ctx->motor);
     bdc_motor_forward(motor_ctrl_ctx->motor);
 
+    SpiConfig_configureSpiBus();
     TempSens_init();
 
     float temp = 0.0f;
