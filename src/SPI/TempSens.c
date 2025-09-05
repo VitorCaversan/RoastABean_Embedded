@@ -22,13 +22,13 @@ static const char *TAG = "TEMP_SENS";
  * EXTERNAL FUNCTIONS
  ******************************************************************************/
 
-void TempSens_init(void)
+void tempSens_init(void)
 {
     ESP_LOGI(TAG, "Init MAX31855");
-    max31855_init_desc(&max31855Module, HELPER_SPI_HOST_DEFAULT, MAX31855_MAX_CLOCK_SPEED_HZ, GPIO_NUM_2);
+    max31855_init_desc(&max31855Module, DEFAULT_SPI_HOST, MAX31855_MAX_CLOCK_SPEED_HZ, GPIO_NUM_2);
 }
 
-float TempSens_getTemperature(void)
+float tempSens_getTemperature(void)
 {
     float tempInCelcius, coldJunctionTemp;
     bool scv, scg, oc;
@@ -48,7 +48,7 @@ float TempSens_getTemperature(void)
     return -1.0f;
 }
 
-float TempSens_getColdJunctionTemperature(void)
+float tempSens_getColdJunctionTemperature(void)
 {
     float tempInCelcius, coldJunctionTemp;
     bool scv, scg, oc;

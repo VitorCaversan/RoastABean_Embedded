@@ -14,6 +14,8 @@
 #include <max31855.h>
 #include <esp_idf_lib_helpers.h>
 
+#include "SpiConfig.h"
+
 /*******************************************************************************
  * MACROS AND DEFINES
  ******************************************************************************/
@@ -26,10 +28,10 @@
  * EXTERNAL FUNCTION DECLARATIONS
  ******************************************************************************/
 
-extern void TempSens_init(void);
+extern void tempSens_init(void);
 
-extern float TempSens_getTemperature(void);
+extern float tempSens_getTemperature(void);
 
-extern float TempSens_getColdJunctionTemperature(void);
+extern float tempSens_getColdJunctionTemperature(void);
 
 #endif // TEMP_SENS_H

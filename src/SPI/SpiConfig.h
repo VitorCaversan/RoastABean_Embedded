@@ -10,9 +10,13 @@
 #include <esp_idf_lib_helpers.h>
 #include "driver/spi_master.h"
 
+#include "Display.h"
+
 /*******************************************************************************
  * MACROS AND DEFINES
  ******************************************************************************/
+
+#define DEFAULT_SPI_HOST     SPI2_HOST
 
 /*******************************************************************************
  * TYPEDEFS AND STRUCTURES
@@ -22,6 +26,6 @@
  * EXTERNAL FUNCTION DECLARATIONS
  ******************************************************************************/
 
-extern void SpiConfig_configureSpiBus(void);
+extern void spiConfig_configureSpiBus(void);
 
 #endif // SPI_CONFIG_H

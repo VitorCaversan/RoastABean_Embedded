@@ -7,6 +7,10 @@
  * MACROS AND DEFINES
  ******************************************************************************/
 
+#define PIN_SCLK     GPIO_NUM_3
+#define PIN_MOSI     GPIO_NUM_15
+#define PIN_MISO     GPIO_NUM_2
+
 /*******************************************************************************
  * LOCAL FUNCTION DECLARATIONS
  ******************************************************************************/
@@ -19,19 +23,17 @@
  * EXTERNAL FUNCTIONS
  ******************************************************************************/
 
-extern void SpiConfig_configureSpiBus(void)
+extern void spiConfig_configureSpiBus(void)
 {
-    spi_bus_config_t cfg =
-    {
-        .mosi_io_num = -1,
-        .miso_io_num = GPIO_NUM_15,
-        .sclk_io_num = GPIO_NUM_1,
+    spi_bus_config_t busConfig = {
+        .sclk_io_num = PIN_SCLK,
+        .mosi_io_num = PIN_MOSI,
+        .miso_io_num = PIN_MISO,
         .quadwp_io_num = -1,
         .quadhd_io_num = -1,
-        .max_transfer_sz = 0,
-        .flags = 0
+        .max_transfer_sz = LCD_H_RES_IN_PIX * 40 * sizeof(uint16_t),
     };
-    ESP_ERROR_CHECK(spi_bus_initialize(HELPER_SPI_HOST_DEFAULT, &cfg, 1));
+    ESP_ERROR_CHECK(spi_bus_initialize(DEFAULT_SPI_HOST, &busConfig, SPI_DMA_CH_AUTO));
 }
 
 /*******************************************************************************

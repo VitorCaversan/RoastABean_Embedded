@@ -15,6 +15,7 @@
 #include "DCMotor.h"
 #include "TempSens.h"
 #include "SpiConfig.h"
+#include "Display.h"
 
 static const char *TAG = "MAIN";
 
@@ -32,13 +33,15 @@ void app_main(void)
     bdc_motor_enable(motor_ctrl_ctx->motor);
     bdc_motor_forward(motor_ctrl_ctx->motor);
 
-    SpiConfig_configureSpiBus();
-    TempSens_init();
+    spiConfig_configureSpiBus();
+    tempSens_init();
+    display_lcdInit();
+    display_uiInit();
 
     float temp = 0.0f;
 
     while (1) {
-        temp = TempSens_getTemperature();
+        temp = tempSens_getTemperature();
 
         if (temp < 25.0f)
         {

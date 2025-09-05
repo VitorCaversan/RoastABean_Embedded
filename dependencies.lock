@@ -45,6 +45,30 @@ dependencies:
       registry_url: https://components.espressif.com/
       type: service
     version: 0.1.0
+  espressif/cmake_utilities:
+    component_hash: 351350613ceafba240b761b4ea991e0f231ac7a9f59a9ee901f751bddc0bb18f
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=4.1'
+    source:
+      registry_url: https://components.espressif.com
+      type: service
+    version: 0.5.3
+  espressif/esp_lcd_ili9341:
+    component_hash: 476fe49688f95201cba03a9391142d48c20b26f8e937de9ece44770a24943829
+    dependencies:
+    - name: espressif/cmake_utilities
+      registry_url: https://components.espressif.com
+      require: private
+      version: 0.*
+    - name: idf
+      require: private
+      version: '>=4.4'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 2.0.1
   espressif/esp_lvgl_port:
     component_hash: e720c95cf0667554a204591bb5fade4655fb2990465557041200fa44b5bc7556
     dependencies:
@@ -74,19 +98,20 @@ dependencies:
       type: idf
     version: 5.5.0
   lvgl/lvgl:
-    component_hash: d7c1ac037ae6e85d94897f807d6e7ba0946a83e720074fc95a4f6241da9f9f53
+    component_hash: b702d642e03e95928046d5c6726558e6444e112420c77efa5fdb6650b0a13c5d
     dependencies: []
     source:
       registry_url: https://components.espressif.com/
       type: service
-    version: 8.4.0
+    version: 9.3.0
 direct_dependencies:
 - esp-idf-lib/esp_idf_lib_helpers
 - esp-idf-lib/max31855
 - espressif/bdc_motor
+- espressif/esp_lcd_ili9341
 - espressif/esp_lvgl_port
 - espressif/pid_ctrl
 - lvgl/lvgl
-manifest_hash: ec1fd2bacc6a36c5ec42ad2fa6f8dce815a9067d0f8deceefa32494d9ad10dbe
+manifest_hash: 70c7be3609b56b5a2b98b039e758153763646395460042917ec0f5140a1a24fd
 target: esp32
 version: 2.0.0
