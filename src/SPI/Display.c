@@ -16,10 +16,6 @@
  * LOCAL FUNCTION DECLARATIONS
  ******************************************************************************/
 
-static void lvglFlushCallback(lv_display_t *display,
-                              const lv_area_t *area,
-                              uint8_t *pixelMap);
-
 /*******************************************************************************
  * LOCAL VARIABLES
  ******************************************************************************/
@@ -86,25 +82,41 @@ extern void display_uiInit(void)
 {
     lv_init();
 
-    // Create LVGL display buffer
-    static uint16_t buf1[LCD_H_RES_IN_PIX * 40];
-    static uint16_t buf2[LCD_H_RES_IN_PIX * 40];
+    lvgl_port_cfg_t portCfg = {
+        .task_priority    = 4,     
+        .task_stack       = 4096,
+        .task_affinity    = -1,  
+        .task_max_sleep_ms= 500, 
+        .timer_period_ms  = 5,   
+    };
+    ESP_ERROR_CHECK(lvgl_port_init(&portCfg));
 
-    lv_display_t *display = lv_display_create(LCD_H_RES_IN_PIX, LCD_V_RES_IN_PIX);
-    lv_display_set_color_format(display, LV_COLOR_FORMAT_RGB565);
-    lv_display_set_flush_cb(display, lvglFlushCallback);
-    lv_display_set_buffers(display, buf1, buf2,
-                           sizeof(buf1), LV_DISPLAY_RENDER_MODE_PARTIAL);
-    lv_display_set_user_data(display, panelHandle);
+    lvgl_port_display_cfg_t dispCfg = {
+        .panel_handle   = panelHandle,   
+        .buffer_size    = LCD_H_RES_IN_PIX * 40,
+        .double_buffer  = true,           
+        .hres           = LCD_H_RES_IN_PIX,     
+        .vres           = LCD_V_RES_IN_PIX,     
+        .monochrome     = false,         
+        .color_format   = LV_COLOR_FORMAT_RGB565,
+        .rotation = {                    
+            .swap_xy   = true,           
+            .mirror_x  = true,           
+            .mirror_y  = false
+        },
+        .flags = {
+            .buff_dma    = true,         
+            .buff_spiram = false         
+        }
+    };
 
-    // Attach LVGL task handler via esp_lvgl_port
-    lvgl_port_cfg_t portConfig = ESP_LVGL_PORT_INIT_CONFIG();
-    portConfig.task_priority = 4;
-    portConfig.task_stack = 4096;
-    ESP_ERROR_CHECK(lvgl_port_init(&portConfig));
-    lvgl_port_add_disp(display);
+    lv_disp_t *display = lvgl_port_add_disp(&dispCfg);
+    assert(display);
 
-    // Simple UI: create a label
+    // NOTE: To change the rotation dinamically, use:
+    // lv_disp_set_rotation(display, LV_DISPLAY_ROTATION_90);
+
+    // Simple UI
     lv_obj_t *label = lv_label_create(lv_screen_active());
     lv_label_set_text(label, "Hello ILI9341!");
     lv_obj_center(label);
@@ -113,15 +125,3 @@ extern void display_uiInit(void)
 /*******************************************************************************
  * LOCAL FUNCTIONS
  ******************************************************************************/
-
-static void lvglFlushCallback(lv_display_t *display,
-                              const lv_area_t *area,
-                              uint8_t *pixelMap)
-{
-    esp_lcd_panel_handle_t panel = (esp_lcd_panel_handle_t)lv_display_get_user_data(display);
-    esp_lcd_panel_draw_bitmap(panel,
-                              area->x1, area->y1,
-                              area->x2 + 1, area->y2 + 1,
-                              pixelMap);
-    lv_disp_flush_ready(display);
-}

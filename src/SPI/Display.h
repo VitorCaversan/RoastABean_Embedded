@@ -32,7 +32,14 @@
  * EXTERNAL FUNCTION DECLARATIONS
  ******************************************************************************/
 
+/**
+ * @brief Initialize the LCD display peripheral and backlight
+ */
 extern void display_lcdInit(void);
+
+/**
+ * @brief Initialize LVGL library and create a simple UI
+ */
 extern void display_uiInit(void);
 
 #endif // DISPLAY_H
