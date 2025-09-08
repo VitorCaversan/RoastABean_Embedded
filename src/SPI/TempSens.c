@@ -45,7 +45,7 @@ float tempSens_getTemperature(void)
         return tempInCelcius;
     }
 
-    return -1.0f;
+    return TEMP_SENS_INVALID_TEMPERATURE;
 }
 
 float tempSens_getColdJunctionTemperature(void)

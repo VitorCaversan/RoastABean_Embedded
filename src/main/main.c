@@ -25,6 +25,10 @@ static const char *TAG = "MAIN";
 
 void app_main(void)
 {
+    spiConfig_configureSpiBus();
+    display_lcdInit();
+    display_uiInit();
+    tempSens_init();
     DCMotor_initDcMotors();
 
     motor_control_context_t *motor_ctrl_ctx = DCMotor_getContext();
@@ -32,11 +36,6 @@ void app_main(void)
     ESP_LOGI(TAG, "Enable motor forward");
     bdc_motor_enable(motor_ctrl_ctx->motor);
     bdc_motor_forward(motor_ctrl_ctx->motor);
-
-    spiConfig_configureSpiBus();
-    tempSens_init();
-    display_lcdInit();
-    display_uiInit();
 
     float temp = 0.0f;
 

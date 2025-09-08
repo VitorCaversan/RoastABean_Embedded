@@ -26,6 +26,9 @@
  * EXTERNAL FUNCTION DECLARATIONS
  ******************************************************************************/
 
+/**
+ * @brief Configure the SPI bus for communication with the display and temperature sensor
+ */
 extern void spiConfig_configureSpiBus(void);
 
 #endif // SPI_CONFIG_H

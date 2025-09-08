@@ -36,6 +36,10 @@ typedef struct {
 /*******************************************************************************
  * EXTERNAL FUNCTION DECLARATIONS
  ******************************************************************************/
+
+/**
+ * @brief Initialize the DC motors using bdc_motor library
+ */
 extern void DCMotor_initDcMotors(void);
 
 #if DCMOTOR_PID_CTRL_ENABLED
