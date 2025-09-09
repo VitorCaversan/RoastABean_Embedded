@@ -9,8 +9,15 @@
 #define BDC_MCPWM_TIMER_RESOLUTION_HZ 10000000 // 10MHz, 1 tick = 0.1us
 #define BDC_MCPWM_FREQ_HZ             25000    // 25KHz PWM
 #define BDC_MCPWM_DUTY_TICK_MAX       (BDC_MCPWM_TIMER_RESOLUTION_HZ / BDC_MCPWM_FREQ_HZ) // maximum value we can set for the duty cycle, in ticks
-#define BDC_MCPWM_GPIO_A              7
-#define BDC_MCPWM_GPIO_B              15
+
+#define MOTOR_IN1_A              GPIO_NUM_38
+#define MOTOR_IN1_B              GPIO_NUM_37
+#define MOTOR_IN2_A              GPIO_NUM_39
+#define MOTOR_IN2_B              40
+#define MOTOR_IN3_A              46
+#define MOTOR_IN3_B              45
+#define MOTOR_IN4_A              48
+#define MOTOR_IN4_B              19
 
 #define BDC_ENCODER_GPIO_A            36
 #define BDC_ENCODER_GPIO_B            35
@@ -30,7 +37,7 @@ static void pid_loop_cb(void *args);
 /*******************************************************************************
  * LOCAL VARIABLES
  ******************************************************************************/
-static motor_control_context_t motorCtrlCntxt = {0};
+static ST_motorControlContext motorsCtrlCntxt[MOTORS_QTY] = {0};
 static const char *TAG = "DCMOTOR";
 
 /*******************************************************************************
@@ -42,8 +49,8 @@ extern void DCMotor_initDcMotors(void)
     ESP_LOGI(TAG, "Create DC motor");
     bdc_motor_config_t motor_config = {
         .pwm_freq_hz = BDC_MCPWM_FREQ_HZ,
-        .pwma_gpio_num = BDC_MCPWM_GPIO_A,
-        .pwmb_gpio_num = BDC_MCPWM_GPIO_B,
+        .pwma_gpio_num = MOTOR_IN1_A,
+        .pwmb_gpio_num = MOTOR_IN1_B,
     };
     bdc_motor_mcpwm_config_t mcpwm_config = {
         .group_id = 0,
@@ -51,8 +58,25 @@ extern void DCMotor_initDcMotors(void)
     };
     bdc_motor_handle_t motor = NULL;
     ESP_ERROR_CHECK(bdc_motor_new_mcpwm_device(&motor_config, &mcpwm_config, &motor));
-    
-    motorCtrlCntxt.motor = motor;
+    motorsCtrlCntxt[MOTOR_1].motor = motor;
+
+    motor_config.pwm_freq_hz = BDC_MCPWM_FREQ_HZ;
+    motor_config.pwma_gpio_num = MOTOR_IN2_A;
+    motor_config.pwmb_gpio_num = MOTOR_IN2_B;
+    ESP_ERROR_CHECK(bdc_motor_new_mcpwm_device(&motor_config, &mcpwm_config, &motor));
+    motorsCtrlCntxt[MOTOR_2].motor = motor;
+
+    motor_config.pwm_freq_hz = BDC_MCPWM_FREQ_HZ;
+    motor_config.pwma_gpio_num = MOTOR_IN3_A;
+    motor_config.pwmb_gpio_num = MOTOR_IN3_B;
+    ESP_ERROR_CHECK(bdc_motor_new_mcpwm_device(&motor_config, &mcpwm_config, &motor));
+    motorsCtrlCntxt[MOTOR_3].motor = motor;
+
+    motor_config.pwm_freq_hz = BDC_MCPWM_FREQ_HZ;
+    motor_config.pwma_gpio_num = MOTOR_IN4_A;
+    motor_config.pwmb_gpio_num = MOTOR_IN4_B;
+    ESP_ERROR_CHECK(bdc_motor_new_mcpwm_device(&motor_config, &mcpwm_config, &motor));
+    motorsCtrlCntxt[MOTOR_4].motor = motor;
 
     return;
 }
@@ -94,7 +118,7 @@ extern void DCMotor_initPulseCntrs(void)
     ESP_ERROR_CHECK(pcnt_unit_clear_count(pcnt_unit));
     ESP_ERROR_CHECK(pcnt_unit_start(pcnt_unit));
     
-    motorCtrlCntxt.pcnt_encoder = pcnt_unit;
+    motorsCtrlCntxt.pcnt_encoder = pcnt_unit;
 }
 
 extern void DCMotor_initPIDCtrl(void)
@@ -116,7 +140,7 @@ extern void DCMotor_initPIDCtrl(void)
     };
     ESP_ERROR_CHECK(pid_new_control_block(&pid_config, &pid_ctrl));
 
-    motorCtrlCntxt.pid_ctrl = pid_ctrl;
+    motorsCtrlCntxt.pid_ctrl = pid_ctrl;
 
     ESP_LOGI(TAG, "Create a timer to do PID calculation periodically");
     const esp_timer_create_args_t periodic_timer_args = {
@@ -138,9 +162,9 @@ extern void DCMotor_initPIDCtrl(void)
 }
 #endif
 
-extern motor_control_context_t *DCMotor_getContext(void)
+extern ST_motorControlContext *DCMotor_getContextFromMotor(EN_destMotor motor)
 {
-    return &motorCtrlCntxt;
+    return &motorsCtrlCntxt[motor];
 }
 
 /*******************************************************************************
@@ -151,7 +175,7 @@ extern motor_control_context_t *DCMotor_getContext(void)
 static void pid_loop_cb(void *args)
 {
     static int last_pulse_count = 0;
-    motor_control_context_t *ctx = (motor_control_context_t *)args;
+    ST_motorControlContext *ctx = (ST_motorControlContext *)args;
     pcnt_unit_handle_t pcnt_unit = ctx->pcnt_encoder;
     pid_ctrl_block_handle_t pid_ctrl = ctx->pid_ctrl;
     bdc_motor_handle_t motor = ctx->motor;

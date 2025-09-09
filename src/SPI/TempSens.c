@@ -7,6 +7,8 @@
  * MACROS AND DEFINES
  ******************************************************************************/
 
+#define TEMP_SENS_CS_PIN           GPIO_NUM_1
+
 /*******************************************************************************
  * LOCAL FUNCTION DECLARATIONS
  ******************************************************************************/
@@ -25,7 +27,7 @@ static const char *TAG = "TEMP_SENS";
 void tempSens_init(void)
 {
     ESP_LOGI(TAG, "Init MAX31855");
-    max31855_init_desc(&max31855Module, DEFAULT_SPI_HOST, MAX31855_MAX_CLOCK_SPEED_HZ, GPIO_NUM_2);
+    max31855_init_desc(&max31855Module, DEFAULT_SPI_HOST, MAX31855_MAX_CLOCK_SPEED_HZ, TEMP_SENS_CS_PIN);
 }
 
 float tempSens_getTemperature(void)

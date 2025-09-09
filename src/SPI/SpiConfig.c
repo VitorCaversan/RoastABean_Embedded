@@ -7,9 +7,9 @@
  * MACROS AND DEFINES
  ******************************************************************************/
 
-#define PIN_SCLK     GPIO_NUM_3
+#define PIN_SCLK     GPIO_NUM_2
 #define PIN_MOSI     GPIO_NUM_15
-#define PIN_MISO     GPIO_NUM_2
+#define PIN_MISO     GPIO_NUM_35
 
 /*******************************************************************************
  * LOCAL FUNCTION DECLARATIONS

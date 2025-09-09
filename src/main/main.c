@@ -31,7 +31,7 @@ void app_main(void)
     tempSens_init();
     DCMotor_initDcMotors();
 
-    motor_control_context_t *motor_ctrl_ctx = DCMotor_getContext();
+    ST_motorControlContext *motor_ctrl_ctx = DCMotor_getContextFromMotor(MOTOR_1);
 
     ESP_LOGI(TAG, "Enable motor forward");
     bdc_motor_enable(motor_ctrl_ctx->motor);

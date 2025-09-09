@@ -24,6 +24,17 @@
 /*******************************************************************************
  * TYPEDEFS AND STRUCTURES
  ******************************************************************************/
+
+typedef enum EN_destMotor
+{
+    MOTOR_1 = 0,
+    MOTOR_2,
+    MOTOR_3,
+    MOTOR_4,
+
+    MOTORS_QTY // Must be the last element
+} EN_destMotor;
+
 typedef struct {
     bdc_motor_handle_t motor;
 #if DCMOTOR_PID_CTRL_ENABLED
@@ -31,7 +42,7 @@ typedef struct {
     pid_ctrl_block_handle_t pid_ctrl;
     int report_pulses;
 #endif
-} motor_control_context_t;
+} ST_motorControlContext;
 
 /*******************************************************************************
  * EXTERNAL FUNCTION DECLARATIONS
@@ -48,6 +59,6 @@ extern void DCMotor_initPulseCntrs(void);
 extern void DCMotor_initPIDCtrl(void);
 #endif
 
-extern motor_control_context_t *DCMotor_getContext(void);
+extern ST_motorControlContext *DCMotor_getContextFromMotor(EN_destMotor motor);
 
 #endif // DC_MOTOR_H
