@@ -113,5 +113,5 @@ direct_dependencies:
 - espressif/pid_ctrl
 - lvgl/lvgl
 manifest_hash: 70c7be3609b56b5a2b98b039e758153763646395460042917ec0f5140a1a24fd
-target: esp32
+target: esp32s3
 version: 2.0.0

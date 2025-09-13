@@ -28,6 +28,12 @@ void app_main(void)
     spiConfig_configureSpiBus();
     display_lcdInit();
     display_uiInit();
+
+    while (1)
+    {
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+
     tempSens_init();
     DCMotor_initDcMotors();
 

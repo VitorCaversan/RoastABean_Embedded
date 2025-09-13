@@ -8,6 +8,7 @@
 #include "driver/gpio.h"
 #include "lvgl.h"
 #include "esp_lvgl_port.h"
+#include "esp_log.h"
 #include "driver/spi_master.h"
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_panel_ops.h"
