@@ -59,6 +59,17 @@ extern void DCMotor_initPulseCntrs(void);
 extern void DCMotor_initPIDCtrl(void);
 #endif
 
+/**
+ * @brief Get the motor control context for a specific motor
+ * 
+ * MOTOR_1 -> IO 38 and 37
+ * MOTOR_2 -> IO 39 and 40
+ * MOTOR_3 -> IO 46 and 45
+ * MOTOR_4 -> IO 48 and 19
+ * 
+ * @param motor The desired motor (MOTOR_1, MOTOR_2, MOTOR_3, MOTOR_4)
+ * @return ST_motorControlContext*
+ */
 extern ST_motorControlContext *DCMotor_getContextFromMotor(EN_destMotor motor);
 
 #endif // DC_MOTOR_H
