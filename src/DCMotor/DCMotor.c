@@ -69,6 +69,7 @@ extern void DCMotor_initDcMotors(void)
     motor_config.pwm_freq_hz = BDC_MCPWM_FREQ_HZ;
     motor_config.pwma_gpio_num = MOTOR_IN3_A;
     motor_config.pwmb_gpio_num = MOTOR_IN3_B;
+    mcpwm_config.group_id = 1; // Different MCPWM group
     ESP_ERROR_CHECK(bdc_motor_new_mcpwm_device(&motor_config, &mcpwm_config, &motor));
     motorsCtrlCntxt[MOTOR_3].motor = motor;
 

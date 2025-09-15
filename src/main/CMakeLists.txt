@@ -1,3 +1,3 @@
 idf_component_register(SRCS "main.c"
                        INCLUDE_DIRS "."
-                       REQUIRES "DCMotor" "SPI")
+                       REQUIRES "DCMotor" "SPI" "Buttons" "OSConfig")
