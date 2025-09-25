@@ -9,11 +9,13 @@
  * MACROS AND DEFINES
  ******************************************************************************/
 
+#define OS_MAIN_TASK_QUEUE_SIZE     32
+
 /*******************************************************************************
  * TYPEDEFS AND STRUCTURES
  ******************************************************************************/
 
-extern QueueHandle_t mainTaskQueue;
+extern QueueHandle_t OS_mainTaskQueue;
 
 /*******************************************************************************
  * EXTERNAL FUNCTION DECLARATIONS

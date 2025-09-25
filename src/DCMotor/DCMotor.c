@@ -46,7 +46,6 @@ static const char *TAG = "DCMOTOR";
 
 extern void DCMotor_initDcMotors(void)
 {
-    ESP_LOGI(TAG, "Create DC motor");
     bdc_motor_config_t motor_config = {
         .pwm_freq_hz = BDC_MCPWM_FREQ_HZ,
         .pwma_gpio_num = MOTOR_IN1_A,
@@ -59,12 +58,14 @@ extern void DCMotor_initDcMotors(void)
     bdc_motor_handle_t motor = NULL;
     ESP_ERROR_CHECK(bdc_motor_new_mcpwm_device(&motor_config, &mcpwm_config, &motor));
     motorsCtrlCntxt[MOTOR_1].motor = motor;
+    ESP_LOGI(TAG, "Created DC motor 1");
 
     motor_config.pwm_freq_hz = BDC_MCPWM_FREQ_HZ;
     motor_config.pwma_gpio_num = MOTOR_IN2_A;
     motor_config.pwmb_gpio_num = MOTOR_IN2_B;
     ESP_ERROR_CHECK(bdc_motor_new_mcpwm_device(&motor_config, &mcpwm_config, &motor));
     motorsCtrlCntxt[MOTOR_2].motor = motor;
+    ESP_LOGI(TAG, "Created DC motor 2");
 
     motor_config.pwm_freq_hz = BDC_MCPWM_FREQ_HZ;
     motor_config.pwma_gpio_num = MOTOR_IN3_A;
@@ -72,12 +73,15 @@ extern void DCMotor_initDcMotors(void)
     mcpwm_config.group_id = 1; // Different MCPWM group
     ESP_ERROR_CHECK(bdc_motor_new_mcpwm_device(&motor_config, &mcpwm_config, &motor));
     motorsCtrlCntxt[MOTOR_3].motor = motor;
+    ESP_LOGI(TAG, "Created DC motor 3");
 
-    motor_config.pwm_freq_hz = BDC_MCPWM_FREQ_HZ;
-    motor_config.pwma_gpio_num = MOTOR_IN4_A;
-    motor_config.pwmb_gpio_num = MOTOR_IN4_B;
-    ESP_ERROR_CHECK(bdc_motor_new_mcpwm_device(&motor_config, &mcpwm_config, &motor));
-    motorsCtrlCntxt[MOTOR_4].motor = motor;
+    // motor_config.pwm_freq_hz = BDC_MCPWM_FREQ_HZ;
+    // motor_config.pwma_gpio_num = MOTOR_IN4_A;
+    // motor_config.pwmb_gpio_num = MOTOR_IN4_B;
+    // ESP_ERROR_CHECK(bdc_motor_new_mcpwm_device(&motor_config, &mcpwm_config, &motor));
+    // motorsCtrlCntxt[MOTOR_4].motor = motor;
+
+    ESP_LOGI(TAG, "Created DC motor 4");
 
     return;
 }

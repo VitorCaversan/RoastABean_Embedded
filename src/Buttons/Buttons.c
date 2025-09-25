@@ -24,13 +24,15 @@
 
 static unsigned long lastIsrInUs[BTN_QTY] = {0};
 
+static const char *TAG = "BUTTONS";
+
 /*******************************************************************************
  * LOCAL FUNCTIONS
  ******************************************************************************/
 
 static void IRAM_ATTR btnIsrHndlr(void *arg)
 {
-    const int pin = (int) (intptr_t) arg;
+    const int pin = (int)(intptr_t)arg;
     
     EN_buttons msg = BTN_1_PRESSED;
     switch (pin)
@@ -54,11 +56,11 @@ static void IRAM_ATTR btnIsrHndlr(void *arg)
 
 #if DEBOUNCE_INTERVAL_US > 0
     unsigned long now = esp_timer_get_time();
-    unsigned long dt  = now - lastIsrInUs[pin];
-    if (dt >= 0 && dt < DEBOUNCE_INTERVAL_US) {
+    unsigned long dt  = now - lastIsrInUs[msg];
+    if (dt < DEBOUNCE_INTERVAL_US) {
         return;
     }
-    lastIsrInUs[pin] = now;
+    lastIsrInUs[msg] = now;
 #else
     unsigned long now = esp_timer_get_time();
 #endif
@@ -66,7 +68,7 @@ static void IRAM_ATTR btnIsrHndlr(void *arg)
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
     // Best effort enqueue; if queue is full, drop or handle later.
-    xQueueSendFromISR(mainTaskQueue, &msg, &xHigherPriorityTaskWoken);
+    xQueueSendFromISR(OS_mainTaskQueue, &msg, &xHigherPriorityTaskWoken);
 
     if (xHigherPriorityTaskWoken)
     {
@@ -85,7 +87,7 @@ extern void btn_configButtons(void)
         .mode = GPIO_MODE_INPUT,
         .pull_up_en = GPIO_PULLUP_ENABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_NEGEDGE
+        .intr_type = GPIO_INTR_POSEDGE
     };
     ESP_ERROR_CHECK(gpio_config(&io_conf));
 
@@ -105,4 +107,6 @@ extern void btn_configButtons(void)
     ESP_ERROR_CHECK(gpio_isr_handler_add(BTN_2_GPIO_PIN, btnIsrHndlr, (void*)(intptr_t)BTN_2_GPIO_PIN));
     ESP_ERROR_CHECK(gpio_isr_handler_add(BTN_3_GPIO_PIN, btnIsrHndlr, (void*)(intptr_t)BTN_3_GPIO_PIN));
     ESP_ERROR_CHECK(gpio_isr_handler_add(BTN_4_GPIO_PIN, btnIsrHndlr, (void*)(intptr_t)BTN_4_GPIO_PIN));
+
+    ESP_LOGI(TAG, "Created buttons");
 }

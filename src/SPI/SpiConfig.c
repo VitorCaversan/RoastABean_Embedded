@@ -19,6 +19,8 @@
  * LOCAL VARIABLES
  ******************************************************************************/
 
+static const char *TAG = "SPI_CONFIG";
+
 /*******************************************************************************
  * EXTERNAL FUNCTIONS
  ******************************************************************************/
@@ -34,6 +36,8 @@ extern void spiConfig_configureSpiBus(void)
         .max_transfer_sz = LCD_H_RES_IN_PIX * 80 * sizeof(uint16_t),
     };
     ESP_ERROR_CHECK(spi_bus_initialize(DEFAULT_SPI_HOST, &busConfig, SPI_DMA_CH_AUTO));
+
+    ESP_LOGI(TAG, "Created SPI bus");
 }
 
 /*******************************************************************************

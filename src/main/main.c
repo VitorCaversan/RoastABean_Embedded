@@ -33,7 +33,7 @@ static void mainTask(void *arg);
  * LOCAL VARIABLES
  ******************************************************************************/
 
-extern QueueHandle_t mainTaskQueue = NULL;
+QueueHandle_t OS_mainTaskQueue = NULL;
 
 static const char *TAG = "MAIN";
 
@@ -43,8 +43,8 @@ static const char *TAG = "MAIN";
 
 void app_main(void)
 {
-    mainTaskQueue = xQueueCreate(32, sizeof(EN_buttons));
-    configASSERT(mainTaskQueue != NULL);
+    OS_mainTaskQueue = xQueueCreate(32, sizeof(EN_buttons));
+    configASSERT(OS_mainTaskQueue != NULL);
 
     spiConfig_configureSpiBus();
     // display_lcdInit();
@@ -68,7 +68,7 @@ static void mainTask(void *arg)
     EN_buttons msg;
 
     while (1) {
-        if (xQueueReceive(mainTaskQueue, &msg, portMAX_DELAY) == pdTRUE)
+        if (xQueueReceive(OS_mainTaskQueue, &msg, portMAX_DELAY) == pdTRUE)
         {
             switch (msg)
             {
@@ -100,7 +100,7 @@ static void mainTask(void *arg)
                 //     ESP_LOGI(TAG, "Temperature is above 30°C");
                 //     bdc_motor_set_speed(motor_ctrl_ctx->motor, 75);
                 // }
-                // break;
+                break;
             default:
                 ESP_LOGW(TAG, "Unknown button press: %d", msg);
                 break;
