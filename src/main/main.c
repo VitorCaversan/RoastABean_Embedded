@@ -47,8 +47,8 @@ void app_main(void)
     configASSERT(OS_mainTaskQueue != NULL);
 
     spiConfig_configureSpiBus();
-    // display_lcdInit();
-    // display_uiInit();
+    display_lcdInit();
+    display_uiInit();
     // tempSens_init();
     DCMotor_initDcMotors();
     btn_configButtons();
@@ -74,15 +74,21 @@ static void mainTask(void *arg)
             {
             case BTN_1_PRESSED:
                 ESP_LOGI(TAG, "Button 1 pressed");
+                display_setUiText("Hello Alfons");
                 break;
             case BTN_2_PRESSED:
                 ESP_LOGI(TAG, "Button 2 pressed");
+                display_setUiText("Como esta seu dia?");
                 break;
             case BTN_3_PRESSED:
                 ESP_LOGI(TAG, "Button 3 pressed");
+                display_setUiText("Espero que esteja......");
                 break;
             case BTN_4_PRESSED:
                 ESP_LOGI(TAG, "Button 4 pressed");
+                display_setUiText("Uma merda!");
+                vTaskDelay(pdMS_TO_TICKS(700));
+                display_setUiText("Muito bom!");
                 // temp = tempSens_getTemperature();
 
                 // if (temp < 25.0f)

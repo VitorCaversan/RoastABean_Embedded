@@ -22,8 +22,14 @@
  * MACROS AND DEFINES
  ******************************************************************************/
 
+#define USE_LCD_ILI9341  0  // Set to 0 to use ST7789
+
 #define LCD_H_RES_IN_PIX    240
+#if USE_LCD_ILI9341
 #define LCD_V_RES_IN_PIX    320
+#else
+#define LCD_V_RES_IN_PIX    240
+#endif
 
 /*******************************************************************************
  * TYPEDEFS AND STRUCTURES
@@ -42,5 +48,12 @@ extern void display_lcdInit(void);
  * @brief Initialize LVGL library and create a simple UI
  */
 extern void display_uiInit(void);
+
+/**
+ * @brief Simple function to change the text of the main label
+ * 
+ * @param text String to be displayed
+ */
+extern void display_setUiText(const char* text);
 
 #endif // DISPLAY_H

@@ -12,7 +12,7 @@
 #define PIN_RST      -1 // Not used
 #define PIN_LED      GPIO_NUM_21
 
-#define LCD_MAX_CLK_HZ        40000000  // 40MHz
+#define LCD_MAX_CLK_HZ        24000000  // 24MHz
 
 /*******************************************************************************
  * LOCAL FUNCTION DECLARATIONS
@@ -26,6 +26,7 @@ static const char *TAG = "DISPLAY";
 
 static esp_lcd_panel_io_handle_t ioHandle = NULL;
 static esp_lcd_panel_handle_t panelHandle = NULL;
+static lv_obj_t *mainLabel = NULL;
 
 /*******************************************************************************
  * EXTERNAL FUNCTIONS
@@ -50,12 +51,19 @@ extern void display_lcdInit(void)
         .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
         .bits_per_pixel = 16,
     };
+#if USE_LCD_ILI9341
     ESP_ERROR_CHECK(esp_lcd_new_panel_ili9341(ioHandle, &panelConfig, &panelHandle));
+#else
+    ESP_ERROR_CHECK(esp_lcd_new_panel_st7789(ioHandle, &panelConfig, &panelHandle));
+#endif
 
     ESP_ERROR_CHECK(esp_lcd_panel_reset(panelHandle));
     ESP_ERROR_CHECK(esp_lcd_panel_init(panelHandle));
-    ESP_ERROR_CHECK(esp_lcd_panel_mirror(panelHandle, true, false));  // landscape if needed
-    ESP_ERROR_CHECK(esp_lcd_panel_swap_xy(panelHandle, true));
+    ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panelHandle, true));
+    ESP_ERROR_CHECK(esp_lcd_panel_mirror(panelHandle, false, false));  // landscape if needed
+#if USE_LCD_ILI9341
+    ESP_ERROR_CHECK(esp_lcd_panel_swap_xy(panelHandle, false));
+#endif
 
     // Backlight
     if (PIN_LED >= 0) {
@@ -77,7 +85,7 @@ extern void display_lcdInit(void)
         };
         ledc_timer_config(&timerConfig);
         ledc_channel_config(&channelConfig);
-        ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 800);
+        ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 1000);
         ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
     }
 }
@@ -105,7 +113,7 @@ extern void display_uiInit(void)
         .monochrome     = false,         
         .color_format   = LV_COLOR_FORMAT_RGB565,
         .rotation = {                    
-            .swap_xy   = true,           
+            .swap_xy   = false,           
             .mirror_x  = false,           
             .mirror_y  = false
         },
@@ -123,9 +131,17 @@ extern void display_uiInit(void)
 
     vTaskDelay(pdMS_TO_TICKS(200));
 
-    lv_obj_t *label = lv_label_create(lv_screen_active());
-    lv_label_set_text(label, "Hello ILI9341!");
-    lv_obj_center(label);
+    mainLabel = lv_label_create(lv_screen_active());
+    lv_label_set_text(mainLabel, "Hello Alfons!");
+    lv_obj_set_style_text_font(mainLabel, &lv_font_montserrat_14, LV_PART_MAIN);
+    lv_obj_center(mainLabel);
+}
+
+extern void display_setUiText(const char* text)
+{
+    lv_label_set_text(mainLabel, text);
+    lv_obj_set_style_text_font(mainLabel, &lv_font_montserrat_14, LV_PART_MAIN);
+    lv_obj_center(mainLabel);
 }
 
 /*******************************************************************************
