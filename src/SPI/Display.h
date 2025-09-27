@@ -56,4 +56,15 @@ extern void display_uiInit(void);
  */
 extern void display_setUiText(const char* text);
 
+/**
+ * @brief Self contained function to create and update a status bar at the top of the screen
+ * 
+ * @param ethUp If ethernet is up (true) or down (false)
+ * @param tempC Temperature in celsius
+ * @param pwm PWM value (0-100)
+ * @param fault If system is in fault state (true) or normal (false)
+ * @param timeStr Formatted time string (e.g., "12:34"), or NULL/empty for no time
+ */
+extern void display_uiStatusBarUpdate(bool ethUp, float tempC, int pwm, bool fault, const char *timeStr);
+
 #endif // DISPLAY_H

@@ -49,7 +49,7 @@ void app_main(void)
     spiConfig_configureSpiBus();
     display_lcdInit();
     display_uiInit();
-    // tempSens_init();
+    tempSens_init();
     DCMotor_initDcMotors();
     btn_configButtons();
 
@@ -74,6 +74,9 @@ static void mainTask(void *arg)
             {
             case BTN_1_PRESSED:
                 ESP_LOGI(TAG, "Button 1 pressed");
+                temp = tempSens_getTemperature();
+                ESP_LOGI(TAG, "Current Temperature: %.2f°C", temp);
+                display_uiStatusBarUpdate(false, temp, 55, false, "N/A");
                 display_setUiText("Hello Alfons");
                 break;
             case BTN_2_PRESSED:
