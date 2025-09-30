@@ -25,7 +25,6 @@
 #define BDC_ENCODER_PCNT_LOW_LIMIT    -1000
 
 #define BDC_PID_LOOP_PERIOD_MS        10   // calculate the motor speed every 10ms
-#define BDC_PID_EXPECT_SPEED          400  // expected motor speed, in the pulses counted by the rotary encoder
 
 /*******************************************************************************
  * LOCAL FUNCTION DECLARATIONS
@@ -193,7 +192,7 @@ static void pid_loop_cb(void *args)
     ctx->report_pulses = real_pulses;
 
     // calculate the speed error
-    float error = BDC_PID_EXPECT_SPEED - real_pulses;
+    float error = BDC_MOTOR_MAX_SPEED - real_pulses;
     float new_speed = 0;
 
     // set the new speed

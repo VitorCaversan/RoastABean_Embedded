@@ -78,37 +78,24 @@ static void mainTask(void *arg)
                 ESP_LOGI(TAG, "Current Temperature: %.2f°C", temp);
                 display_uiStatusBarUpdate(false, temp, 55, false, "N/A");
                 display_setUiText("Hello Alfons");
+                bdc_motor_set_speed(motor_ctrl_ctx->motor, BDC_MOTOR_MAX_SPEED / 4);
                 break;
             case BTN_2_PRESSED:
                 ESP_LOGI(TAG, "Button 2 pressed");
                 display_setUiText("Como esta seu dia?");
+                bdc_motor_set_speed(motor_ctrl_ctx->motor, BDC_MOTOR_MAX_SPEED / 2);
                 break;
             case BTN_3_PRESSED:
                 ESP_LOGI(TAG, "Button 3 pressed");
                 display_setUiText("Espero que esteja......");
+                bdc_motor_set_speed(motor_ctrl_ctx->motor, BDC_MOTOR_MAX_SPEED / 4 * 3);
                 break;
             case BTN_4_PRESSED:
                 ESP_LOGI(TAG, "Button 4 pressed");
                 display_setUiText("Uma merda!");
+                bdc_motor_set_speed(motor_ctrl_ctx->motor, BDC_MOTOR_MAX_SPEED);
                 vTaskDelay(pdMS_TO_TICKS(700));
                 display_setUiText("Muito bom!");
-                // temp = tempSens_getTemperature();
-
-                // if (temp < 25.0f)
-                // {
-                //     ESP_LOGI(TAG, "Temperature is below 25°C");
-                //     bdc_motor_set_speed(motor_ctrl_ctx->motor, 25);
-                // }
-                // else if (temp < 30.0f)
-                // {
-                //     ESP_LOGI(TAG, "Temperature is below 30°C");
-                //     bdc_motor_set_speed(motor_ctrl_ctx->motor, 50);
-                // }
-                // else
-                // {
-                //     ESP_LOGI(TAG, "Temperature is above 30°C");
-                //     bdc_motor_set_speed(motor_ctrl_ctx->motor, 75);
-                // }
                 break;
             default:
                 ESP_LOGW(TAG, "Unknown button press: %d", msg);
