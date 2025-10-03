@@ -14,6 +14,7 @@
 #include "SpiConfig.h"
 #include "Display.h"
 #include "Buttons.h"
+#include "TriacControl.h"
 #include "OSConfig.h"
 
 /*******************************************************************************
@@ -50,6 +51,7 @@ void app_main(void)
     display_lcdInit();
     display_uiInit();
     tempSens_init();
+    triac_triacInit();
     DCMotor_initDcMotors();
     btn_configButtons();
 
@@ -65,10 +67,11 @@ static void mainTask(void *arg)
     bdc_motor_forward(motor_ctrl_ctx->motor);
 
     float temp = 0.0f;
+    float pwm = 0.0f;
     EN_buttons msg;
 
     while (1) {
-        if (xQueueReceive(OS_mainTaskQueue, &msg, portMAX_DELAY) == pdTRUE)
+        if (xQueueReceive(OS_mainTaskQueue, &msg, pdMS_TO_TICKS(2000)) == pdTRUE)
         {
             switch (msg)
             {
@@ -79,16 +82,21 @@ static void mainTask(void *arg)
                 display_uiStatusBarUpdate(false, temp, 55, false, "N/A");
                 display_setUiText("Hello Alfons");
                 bdc_motor_set_speed(motor_ctrl_ctx->motor, BDC_MOTOR_MAX_SPEED / 4);
+                triac_setPwmPercent(5.0f);
                 break;
             case BTN_2_PRESSED:
                 ESP_LOGI(TAG, "Button 2 pressed");
                 display_setUiText("Como esta seu dia?");
                 bdc_motor_set_speed(motor_ctrl_ctx->motor, BDC_MOTOR_MAX_SPEED / 2);
+                pwm += 5;
+                triac_setPwmPercent(pwm);
                 break;
             case BTN_3_PRESSED:
                 ESP_LOGI(TAG, "Button 3 pressed");
                 display_setUiText("Espero que esteja......");
                 bdc_motor_set_speed(motor_ctrl_ctx->motor, BDC_MOTOR_MAX_SPEED / 4 * 3);
+                pwm -= 5;
+                triac_setPwmPercent(pwm);
                 break;
             case BTN_4_PRESSED:
                 ESP_LOGI(TAG, "Button 4 pressed");
@@ -96,11 +104,18 @@ static void mainTask(void *arg)
                 bdc_motor_set_speed(motor_ctrl_ctx->motor, BDC_MOTOR_MAX_SPEED);
                 vTaskDelay(pdMS_TO_TICKS(700));
                 display_setUiText("Muito bom!");
+                triac_setPwmPercent(0.0f);
                 break;
             default:
                 ESP_LOGW(TAG, "Unknown button press: %d", msg);
                 break;
             }
+        }
+        else
+        {
+            ESP_LOGI(TAG, "Current pwm %.2f%%", pwm);
+            temp = tempSens_getTemperature();
+            ESP_LOGI(TAG, "Current Temperature: %.2f°C", temp);
         }
         // the following logging format is according to the requirement of serial-studio frame format
         // also see the dashboard config file `serial-studio-dashboard.json` for more information

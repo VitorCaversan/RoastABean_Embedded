@@ -14,6 +14,8 @@
 
 #define LCD_MAX_CLK_HZ        24000000  // 24MHz
 
+#define INITIAL_BCKLIGHT_DUTY_PERCENT   80.0f
+
 /*******************************************************************************
  * LOCAL FUNCTION DECLARATIONS
  ******************************************************************************/
@@ -85,7 +87,10 @@ extern void display_lcdInit(void)
         };
         ledc_timer_config(&timerConfig);
         ledc_channel_config(&channelConfig);
-        ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 1000);
+        unsigned long maxDuty = (1u << LEDC_TIMER_10_BIT) - 1;
+        unsigned long duty = (unsigned long)((INITIAL_BCKLIGHT_DUTY_PERCENT / 100.0f) *
+                                             (float)maxDuty + 0.5f);
+        ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, duty);
         ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
     }
 }
