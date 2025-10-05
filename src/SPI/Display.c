@@ -10,9 +10,13 @@
 #define PIN_CS       GPIO_NUM_16
 #define PIN_DC       GPIO_NUM_18
 #define PIN_RST      -1 // Not used
-#define PIN_LED      GPIO_NUM_21
-
+#define PIN_LED      GPIO_NUM_3
 #define LCD_MAX_CLK_HZ        24000000  // 24MHz
+
+#define LCD_BCKLIGHT_MODE            LEDC_LOW_SPEED_MODE   // low-speed works on all pins on S3
+#define LCD_BCKLIGHT_TIMER           LEDC_TIMER_0
+#define LCD_BCKLIGHT_CHANNEL         LEDC_CHANNEL_0
+#define LCD_BCKLIGHT_DUTY_RES        LEDC_TIMER_10_BIT
 
 #define INITIAL_BCKLIGHT_DUTY_PERCENT   80.0f
 
@@ -70,28 +74,28 @@ extern void display_lcdInit(void)
     // Backlight
     if (PIN_LED >= 0) {
         ledc_timer_config_t timerConfig = {
-            .speed_mode = LEDC_LOW_SPEED_MODE,
-            .duty_resolution = LEDC_TIMER_10_BIT,
-            .timer_num = LEDC_TIMER_0,
+            .speed_mode = LCD_BCKLIGHT_MODE,
+            .duty_resolution = LCD_BCKLIGHT_DUTY_RES,
+            .timer_num = LCD_BCKLIGHT_TIMER,
             .freq_hz = 5000,
             .clk_cfg = LEDC_AUTO_CLK
         };
         ledc_channel_config_t channelConfig = {
             .gpio_num = PIN_LED,
-            .speed_mode = LEDC_LOW_SPEED_MODE,
-            .channel = LEDC_CHANNEL_0,
+            .speed_mode = LCD_BCKLIGHT_MODE,
+            .channel = LCD_BCKLIGHT_CHANNEL,
             .intr_type = LEDC_INTR_DISABLE,
-            .timer_sel = LEDC_TIMER_0,
+            .timer_sel = LCD_BCKLIGHT_TIMER,
             .duty = 0,
             .hpoint = 0
         };
         ledc_timer_config(&timerConfig);
         ledc_channel_config(&channelConfig);
-        unsigned long maxDuty = (1u << LEDC_TIMER_10_BIT) - 1;
+        unsigned long maxDuty = (1u << LCD_BCKLIGHT_DUTY_RES) - 1;
         unsigned long duty = (unsigned long)((INITIAL_BCKLIGHT_DUTY_PERCENT / 100.0f) *
                                              (float)maxDuty + 0.5f);
-        ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, duty);
-        ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+        ledc_set_duty(LCD_BCKLIGHT_MODE, LCD_BCKLIGHT_CHANNEL, duty);
+        ledc_update_duty(LCD_BCKLIGHT_MODE, LCD_BCKLIGHT_CHANNEL);
     }
 }
 
@@ -140,6 +144,19 @@ extern void display_uiInit(void)
     lv_label_set_text(mainLabel, "Hello Alfons!");
     lv_obj_set_style_text_font(mainLabel, &lv_font_montserrat_14, LV_PART_MAIN);
     lv_obj_center(mainLabel);
+}
+
+extern void display_setDispBrightness(float brightness)
+{
+    if (brightness < 0.0)
+        brightness = 0;
+    if (brightness > 100)
+        brightness = 100;
+    
+    unsigned long maxDuty = (1u << LCD_BCKLIGHT_DUTY_RES) - 1;
+    unsigned long duty = (unsigned long)((brightness / 100.0f) * (float)maxDuty + 0.5f);
+    ledc_set_duty(LCD_BCKLIGHT_MODE, LCD_BCKLIGHT_CHANNEL, duty);
+    ledc_update_duty(LCD_BCKLIGHT_MODE, LCD_BCKLIGHT_CHANNEL);
 }
 
 extern void display_setUiText(const char* text)

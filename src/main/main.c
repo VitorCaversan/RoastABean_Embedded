@@ -68,6 +68,7 @@ static void mainTask(void *arg)
 
     float temp = 0.0f;
     float pwm = 0.0f;
+    float brightness = 80.0f;
     EN_buttons msg;
 
     while (1) {
@@ -90,6 +91,8 @@ static void mainTask(void *arg)
                 bdc_motor_set_speed(motor_ctrl_ctx->motor, BDC_MOTOR_MAX_SPEED / 2);
                 pwm += 5;
                 triac_setPwmPercent(pwm);
+                brightness += 5.0f;
+                display_setDispBrightness(brightness);
                 break;
             case BTN_3_PRESSED:
                 ESP_LOGI(TAG, "Button 3 pressed");
@@ -97,6 +100,8 @@ static void mainTask(void *arg)
                 bdc_motor_set_speed(motor_ctrl_ctx->motor, BDC_MOTOR_MAX_SPEED / 4 * 3);
                 pwm -= 5;
                 triac_setPwmPercent(pwm);
+                brightness -= 5.0f;
+                display_setDispBrightness(brightness);
                 break;
             case BTN_4_PRESSED:
                 ESP_LOGI(TAG, "Button 4 pressed");

@@ -50,6 +50,13 @@ extern void display_lcdInit(void);
 extern void display_uiInit(void);
 
 /**
+ * @brief Set the display brightness
+ * 
+ * @param brightness Value from 0.0 to 100.0
+ */
+extern void display_setDispBrightness(float brightness);
+
+/**
  * @brief Simple function to change the text of the main label
  * 
  * @param text String to be displayed
