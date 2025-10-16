@@ -60,11 +60,11 @@ void app_main(void)
 
 static void mainTask(void *arg)
 {
-    ST_motorControlContext *motor_ctrl_ctx = DCMotor_getContextFromMotor(MOTOR_1);
+    ST_motorControlContext *motor_ctrl_ctx = DCMotor_getContextFromMotor(TB_BOARD_1);
 
     ESP_LOGI(TAG, "Enable motor forward");
-    bdc_motor_enable(motor_ctrl_ctx->motor);
-    bdc_motor_forward(motor_ctrl_ctx->motor);
+    tb6612_setSpeed(&motor_ctrl_ctx->motor, MOTOR_A, 0);
+    tb6612_setSpeed(&motor_ctrl_ctx->motor, MOTOR_B, 0);
 
     float temp = 0.0f;
     float pwm = 0.0f;
@@ -82,13 +82,13 @@ static void mainTask(void *arg)
                 ESP_LOGI(TAG, "Current Temperature: %.2f°C", temp);
                 display_uiStatusBarUpdate(false, temp, 55, false, "N/A");
                 display_setUiText("Hello Alfons");
-                bdc_motor_set_speed(motor_ctrl_ctx->motor, BDC_MOTOR_MAX_SPEED / 4);
+                tb6612_setSpeed(&motor_ctrl_ctx->motor, MOTOR_A, 50);
                 triac_setPwmPercent(5.0f);
                 break;
             case BTN_2_PRESSED:
                 ESP_LOGI(TAG, "Button 2 pressed");
                 display_setUiText("Como esta seu dia?");
-                bdc_motor_set_speed(motor_ctrl_ctx->motor, BDC_MOTOR_MAX_SPEED / 2);
+                tb6612_setSpeed(&motor_ctrl_ctx->motor, MOTOR_B, 50);
                 pwm += 5;
                 triac_setPwmPercent(pwm);
                 brightness += 5.0f;
@@ -97,7 +97,7 @@ static void mainTask(void *arg)
             case BTN_3_PRESSED:
                 ESP_LOGI(TAG, "Button 3 pressed");
                 display_setUiText("Espero que esteja......");
-                bdc_motor_set_speed(motor_ctrl_ctx->motor, BDC_MOTOR_MAX_SPEED / 4 * 3);
+                tb6612_setSpeed(&motor_ctrl_ctx->motor, MOTOR_A, 100);
                 pwm -= 5;
                 triac_setPwmPercent(pwm);
                 brightness -= 5.0f;
@@ -106,7 +106,7 @@ static void mainTask(void *arg)
             case BTN_4_PRESSED:
                 ESP_LOGI(TAG, "Button 4 pressed");
                 display_setUiText("Uma merda!");
-                bdc_motor_set_speed(motor_ctrl_ctx->motor, BDC_MOTOR_MAX_SPEED);
+                tb6612_setSpeed(&motor_ctrl_ctx->motor, MOTOR_B, 100);
                 vTaskDelay(pdMS_TO_TICKS(700));
                 display_setUiText("Muito bom!");
                 triac_setPwmPercent(0.0f);

@@ -13,8 +13,8 @@
 #include "esp_timer.h"
 #include "driver/gpio.h"
 #include "driver/pulse_cnt.h"
-#include "bdc_motor.h"
 #include "pid_ctrl.h"
+#include "tb6612.h"
 
 /*******************************************************************************
  * MACROS AND DEFINES
@@ -26,18 +26,16 @@
  * TYPEDEFS AND STRUCTURES
  ******************************************************************************/
 
-typedef enum EN_destMotor
+typedef enum EN_TbBoard
 {
-    MOTOR_1 = 0,
-    MOTOR_2,
-    MOTOR_3,
-    MOTOR_4,
+    TB_BOARD_1 = 0,
+    TB_BOARD_2,
 
     MOTORS_QTY // Must be the last element
-} EN_destMotor;
+} EN_TbBoard;
 
 typedef struct {
-    bdc_motor_handle_t motor;
+    tb6612Handle_t motor;
 #if DCMOTOR_PID_CTRL_ENABLED
     pcnt_unit_handle_t pcnt_encoder;
     pid_ctrl_block_handle_t pid_ctrl;
@@ -63,14 +61,12 @@ extern void DCMotor_initPIDCtrl(void);
 /**
  * @brief Get the motor control context for a specific motor
  * 
- * MOTOR_1 -> IO 38 and 37
- * MOTOR_2 -> IO 39 and 40
- * MOTOR_3 -> IO 46 and 45
- * MOTOR_4 -> IO 48 and 19
+ * TB_BOARD_1 -> Motor 1 and 2
+ * TB_BOARD_2 -> Motor 2 and 3
  * 
- * @param motor The desired motor (MOTOR_1, MOTOR_2, MOTOR_3, MOTOR_4)
+ * @param motor The desired board
  * @return ST_motorControlContext*
  */
-extern ST_motorControlContext *DCMotor_getContextFromMotor(EN_destMotor motor);
+extern ST_motorControlContext *DCMotor_getContextFromMotor(EN_TbBoard motor);
 
 #endif // DC_MOTOR_H

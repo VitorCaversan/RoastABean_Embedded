@@ -10,14 +10,21 @@
 #define BDC_MCPWM_FREQ_HZ             25000    // 25KHz PWM
 #define BDC_MCPWM_DUTY_TICK_MAX       (BDC_MCPWM_TIMER_RESOLUTION_HZ / BDC_MCPWM_FREQ_HZ) // maximum value we can set for the duty cycle, in ticks
 
-#define MOTOR_IN1_A              GPIO_NUM_38
-#define MOTOR_IN1_B              GPIO_NUM_37
-#define MOTOR_IN2_A              GPIO_NUM_39
-#define MOTOR_IN2_B              40
-#define MOTOR_IN3_A              46
-#define MOTOR_IN3_B              45
-#define MOTOR_IN4_A              48
-#define MOTOR_IN4_B              19
+#define MOTOR1_IN_A              GPIO_NUM_38
+#define MOTOR1_IN_B              GPIO_NUM_37
+#define MOTOR2_IN_A              GPIO_NUM_39
+#define MOTOR2_IN_B              40
+#define MOTOR3_IN_A              46
+#define MOTOR3_IN_B              45
+#define MOTOR4_IN_A              48
+#define MOTOR4_IN_B              19
+
+#define MOTOR1_PWM_PIN              36
+#define MOTOR2_PWM_PIN              41
+#define MOTOR3_PWM_PIN              42
+#define MOTOR4_PWM_PIN              20
+
+#define MOTOR_STBY_PIN              47
 
 #define BDC_ENCODER_GPIO_A            36
 #define BDC_ENCODER_GPIO_B            35
@@ -45,42 +52,33 @@ static const char *TAG = "DCMOTOR";
 
 extern void DCMotor_initDcMotors(void)
 {
-    bdc_motor_config_t motor_config = {
-        .pwm_freq_hz = BDC_MCPWM_FREQ_HZ,
-        .pwma_gpio_num = MOTOR_IN1_A,
-        .pwmb_gpio_num = MOTOR_IN1_B,
+    tb6612Config_t cfg = {
+        .stbyGpio   = MOTOR_STBY_PIN,      // STBY pin (tie HIGH if not using)
+        .ain1Gpio   = MOTOR1_IN_A, .ain2Gpio = MOTOR1_IN_B, .pwmaGpio = MOTOR1_PWM_PIN,
+        .bin1Gpio   = MOTOR2_IN_A, .bin2Gpio = MOTOR2_IN_B, .pwmbGpio = MOTOR2_PWM_PIN,
+        .ledcMode   = LEDC_LOW_SPEED_MODE,
+        .ledcTimer  = LEDC_TIMER_1,
+        .pwmFreqHz  = 20000,
+        .dutyRes    = LEDC_TIMER_10_BIT,
+        .chA        = LEDC_CHANNEL_1,
+        .chB        = LEDC_CHANNEL_2,
     };
-    bdc_motor_mcpwm_config_t mcpwm_config = {
-        .group_id = 0,
-        .resolution_hz = BDC_MCPWM_TIMER_RESOLUTION_HZ,
+    ESP_ERROR_CHECK(tb6612_init(&motorsCtrlCntxt[TB_BOARD_1].motor, &cfg));
+    ESP_LOGI(TAG, "Created TB board 1");
+
+    tb6612Config_t cfg2 = {
+        .stbyGpio   = MOTOR_STBY_PIN,      // STBY pin (tie HIGH if not using)
+        .ain1Gpio   = MOTOR3_IN_A, .ain2Gpio = MOTOR3_IN_B, .pwmaGpio = MOTOR3_PWM_PIN,
+        .bin1Gpio   = MOTOR4_IN_A, .bin2Gpio = MOTOR4_IN_B, .pwmbGpio = MOTOR4_PWM_PIN,
+        .ledcMode   = LEDC_LOW_SPEED_MODE,
+        .ledcTimer  = LEDC_TIMER_1,
+        .pwmFreqHz  = 20000,
+        .dutyRes    = LEDC_TIMER_10_BIT,
+        .chA        = LEDC_CHANNEL_3,
+        .chB        = LEDC_CHANNEL_4,
     };
-    bdc_motor_handle_t motor = NULL;
-    ESP_ERROR_CHECK(bdc_motor_new_mcpwm_device(&motor_config, &mcpwm_config, &motor));
-    motorsCtrlCntxt[MOTOR_1].motor = motor;
-    ESP_LOGI(TAG, "Created DC motor 1");
-
-    motor_config.pwm_freq_hz = BDC_MCPWM_FREQ_HZ;
-    motor_config.pwma_gpio_num = MOTOR_IN2_A;
-    motor_config.pwmb_gpio_num = MOTOR_IN2_B;
-    ESP_ERROR_CHECK(bdc_motor_new_mcpwm_device(&motor_config, &mcpwm_config, &motor));
-    motorsCtrlCntxt[MOTOR_2].motor = motor;
-    ESP_LOGI(TAG, "Created DC motor 2");
-
-    motor_config.pwm_freq_hz = BDC_MCPWM_FREQ_HZ;
-    motor_config.pwma_gpio_num = MOTOR_IN3_A;
-    motor_config.pwmb_gpio_num = MOTOR_IN3_B;
-    mcpwm_config.group_id = 1; // Different MCPWM group
-    ESP_ERROR_CHECK(bdc_motor_new_mcpwm_device(&motor_config, &mcpwm_config, &motor));
-    motorsCtrlCntxt[MOTOR_3].motor = motor;
-    ESP_LOGI(TAG, "Created DC motor 3");
-
-    // motor_config.pwm_freq_hz = BDC_MCPWM_FREQ_HZ;
-    // motor_config.pwma_gpio_num = MOTOR_IN4_A;
-    // motor_config.pwmb_gpio_num = MOTOR_IN4_B;
-    // ESP_ERROR_CHECK(bdc_motor_new_mcpwm_device(&motor_config, &mcpwm_config, &motor));
-    // motorsCtrlCntxt[MOTOR_4].motor = motor;
-
-    ESP_LOGI(TAG, "Created DC motor 4");
+    ESP_ERROR_CHECK(tb6612_init(&motorsCtrlCntxt[TB_BOARD_2].motor, &cfg2));
+    ESP_LOGI(TAG, "Created TB board 2");
 
     return;
 }
@@ -166,7 +164,7 @@ extern void DCMotor_initPIDCtrl(void)
 }
 #endif
 
-extern ST_motorControlContext *DCMotor_getContextFromMotor(EN_destMotor motor)
+extern ST_motorControlContext *DCMotor_getContextFromMotor(EN_TbBoard motor)
 {
     return &motorsCtrlCntxt[motor];
 }
