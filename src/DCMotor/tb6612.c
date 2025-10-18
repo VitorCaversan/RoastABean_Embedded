@@ -41,28 +41,34 @@ esp_err_t tb6612_init(tb6612Handle_t *h, const tb6612Config_t *cfg)
     ESP_ERROR_CHECK(ledc_timer_config(&tcfg));
 
     // LEDC channel A
-    ledc_channel_config_t ccA = {
-        .gpio_num = cfg->pwmaGpio,
-        .speed_mode = cfg->ledcMode,
-        .channel = cfg->chA,
-        .intr_type = LEDC_INTR_DISABLE,
-        .timer_sel = cfg->ledcTimer,
-        .duty = 0,
-        .hpoint = 0
-    };
-    ESP_ERROR_CHECK(ledc_channel_config(&ccA));
+    if (cfg->pwmaGpio >= 0)
+    {
+        ledc_channel_config_t ccA = {
+            .gpio_num = cfg->pwmaGpio,
+            .speed_mode = cfg->ledcMode,
+            .channel = cfg->chA,
+            .intr_type = LEDC_INTR_DISABLE,
+            .timer_sel = cfg->ledcTimer,
+            .duty = 0,
+            .hpoint = 0
+        };
+        ESP_ERROR_CHECK(ledc_channel_config(&ccA));
+    }
 
     // LEDC channel B
-    ledc_channel_config_t ccB = {
-        .gpio_num = cfg->pwmbGpio,
-        .speed_mode = cfg->ledcMode,
-        .channel = cfg->chB,
-        .intr_type = LEDC_INTR_DISABLE,
-        .timer_sel = cfg->ledcTimer,
-        .duty = 0,
-        .hpoint = 0
-    };
-    ESP_ERROR_CHECK(ledc_channel_config(&ccB));
+    if (cfg->pwmbGpio >= 0)
+    {
+        ledc_channel_config_t ccB = {
+            .gpio_num = cfg->pwmbGpio,
+            .speed_mode = cfg->ledcMode,
+            .channel = cfg->chB,
+            .intr_type = LEDC_INTR_DISABLE,
+            .timer_sel = cfg->ledcTimer,
+            .duty = 0,
+            .hpoint = 0
+        };
+        ESP_ERROR_CHECK(ledc_channel_config(&ccB));
+    }
 
     // Default to coast and 0% duty
     tb6612_coast(h, MOTOR_A);
@@ -77,8 +83,12 @@ void tb6612_setDirection(tb6612Handle_t *h, EN_tbMotorId m, EN_tbDir dir)
 {
     if (!h) return;
     if (m == MOTOR_A) {
+        if ((h->cfg.ain1Gpio < 0) || (h->cfg.ain2Gpio < 0))
+            return;
         setInPins(h->cfg.ain1Gpio, h->cfg.ain2Gpio, dir==TB_DIR_FORWARD, dir==TB_DIR_REVERSE);
     } else {
+        if ((h->cfg.bin1Gpio < 0) || (h->cfg.bin2Gpio < 0))
+            return;
         setInPins(h->cfg.bin1Gpio, h->cfg.bin2Gpio, dir==TB_DIR_FORWARD, dir==TB_DIR_REVERSE);
     }
 }
@@ -86,25 +96,42 @@ void tb6612_setDirection(tb6612Handle_t *h, EN_tbMotorId m, EN_tbDir dir)
 void tb6612_coast(tb6612Handle_t *h, EN_tbMotorId m)
 {
     if (!h) return;
-    if (m == MOTOR_A) setInPins(h->cfg.ain1Gpio, h->cfg.ain2Gpio, 0, 0);
-    else             setInPins(h->cfg.bin1Gpio, h->cfg.bin2Gpio, 0, 0);
+    if (m == MOTOR_A) {
+        if ((h->cfg.ain1Gpio < 0) || (h->cfg.ain2Gpio < 0))
+            return;
+        setInPins(h->cfg.ain1Gpio, h->cfg.ain2Gpio, 0, 0);
+    } else {
+        if ((h->cfg.bin1Gpio < 0) || (h->cfg.bin2Gpio < 0))
+            return;
+        setInPins(h->cfg.bin1Gpio, h->cfg.bin2Gpio, 0, 0);
+    }
 }
 
 void tb6612_brake(tb6612Handle_t *h, EN_tbMotorId m)
 {
     if (!h) return;
-    if (m == MOTOR_A) setInPins(h->cfg.ain1Gpio, h->cfg.ain2Gpio, 1, 1);
-    else             setInPins(h->cfg.bin1Gpio, h->cfg.bin2Gpio, 1, 1);
+    if (m == MOTOR_A) {
+        if ((h->cfg.ain1Gpio < 0) || (h->cfg.ain2Gpio < 0))
+            return;
+        setInPins(h->cfg.ain1Gpio, h->cfg.ain2Gpio, 1, 1);
+    } else {
+        if ((h->cfg.bin1Gpio < 0) || (h->cfg.bin2Gpio < 0))
+            return;
+        setInPins(h->cfg.bin1Gpio, h->cfg.bin2Gpio, 1, 1);
+    }
 }
 
 void tb6612_setDuty(tb6612Handle_t *h, EN_tbMotorId m, float dutyPercent)
 {
     if (!h) return;
+    if ((m == MOTOR_A) && (h->cfg.pwmaGpio < 0)) return;
+    if ((m == MOTOR_B) && (h->cfg.pwmbGpio < 0)) return;
     if (dutyPercent < 0) dutyPercent = 0;
     if (dutyPercent > 100) dutyPercent = 100;
     uint32_t duty = (uint32_t)lroundf((dutyPercent / 100.0f) * (float)h->maxDuty);
 
     ledc_channel_t ch = (m == MOTOR_A) ? h->cfg.chA : h->cfg.chB;
+    
     ledc_set_duty(h->cfg.ledcMode, ch, duty);
     ledc_update_duty(h->cfg.ledcMode, ch);
 }

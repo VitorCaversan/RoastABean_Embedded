@@ -26,8 +26,8 @@
 
 #define MOTOR_STBY_PIN              47
 
-#define BDC_ENCODER_GPIO_A            36
-#define BDC_ENCODER_GPIO_B            35
+#define BDC_ENCODER_GPIO_A            -1
+#define BDC_ENCODER_GPIO_B            -1
 #define BDC_ENCODER_PCNT_HIGH_LIMIT   1000
 #define BDC_ENCODER_PCNT_LOW_LIMIT    -1000
 
@@ -57,11 +57,11 @@ extern void DCMotor_initDcMotors(void)
         .ain1Gpio   = MOTOR1_IN_A, .ain2Gpio = MOTOR1_IN_B, .pwmaGpio = MOTOR1_PWM_PIN,
         .bin1Gpio   = MOTOR2_IN_A, .bin2Gpio = MOTOR2_IN_B, .pwmbGpio = MOTOR2_PWM_PIN,
         .ledcMode   = LEDC_LOW_SPEED_MODE,
-        .ledcTimer  = LEDC_TIMER_1,
-        .pwmFreqHz  = 20000,
+        .ledcTimer  = LEDC_TIMER_2,
+        .pwmFreqHz  = 5000,
         .dutyRes    = LEDC_TIMER_10_BIT,
-        .chA        = LEDC_CHANNEL_1,
-        .chB        = LEDC_CHANNEL_2,
+        .chA        = LEDC_CHANNEL_2,
+        .chB        = LEDC_CHANNEL_3,
     };
     ESP_ERROR_CHECK(tb6612_init(&motorsCtrlCntxt[TB_BOARD_1].motor, &cfg));
     ESP_LOGI(TAG, "Created TB board 1");
@@ -69,13 +69,13 @@ extern void DCMotor_initDcMotors(void)
     tb6612Config_t cfg2 = {
         .stbyGpio   = MOTOR_STBY_PIN,      // STBY pin (tie HIGH if not using)
         .ain1Gpio   = MOTOR3_IN_A, .ain2Gpio = MOTOR3_IN_B, .pwmaGpio = MOTOR3_PWM_PIN,
-        .bin1Gpio   = MOTOR4_IN_A, .bin2Gpio = MOTOR4_IN_B, .pwmbGpio = MOTOR4_PWM_PIN,
+        .bin1Gpio   = MOTOR4_IN_A, .bin2Gpio = -1, .pwmbGpio = -1,
         .ledcMode   = LEDC_LOW_SPEED_MODE,
-        .ledcTimer  = LEDC_TIMER_1,
-        .pwmFreqHz  = 20000,
+        .ledcTimer  = LEDC_TIMER_2,
+        .pwmFreqHz  = 5000,
         .dutyRes    = LEDC_TIMER_10_BIT,
-        .chA        = LEDC_CHANNEL_3,
-        .chB        = LEDC_CHANNEL_4,
+        .chA        = LEDC_CHANNEL_4,
+        .chB        = LEDC_CHANNEL_5,
     };
     ESP_ERROR_CHECK(tb6612_init(&motorsCtrlCntxt[TB_BOARD_2].motor, &cfg2));
     ESP_LOGI(TAG, "Created TB board 2");

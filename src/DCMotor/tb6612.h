@@ -3,6 +3,7 @@
 
 #include "driver/ledc.h"
 #include "driver/gpio.h"
+#include "esp_log.h"
 #include <stdbool.h>
 
 typedef enum EN_tbMotorId
@@ -40,23 +41,74 @@ typedef struct tb6612Handle_t{
     uint32_t maxDuty; // derived from dutyRes
 } tb6612Handle_t;
 
-// Initialize TB6612FNG control (LEDC + GPIOs). Leaves motors stopped & STBY enabled.
+/**
+ * @brief Initialize TB6612FNG control (LEDC + GPIOs). Leaves motors stopped & STBY enabled.
+ * 
+ * @param h Motor driver handler to be configured
+ * @param cfg Configure structure used
+ * @return esp_err_t
+ */
 esp_err_t tb6612_init(tb6612Handle_t *h, const tb6612Config_t *cfg);
 
-// Set direction (IN1/IN2). TB_DIR_FORWARD = IN1=1, IN2=0 ; TB_DIR_REVERSE = IN1=0, IN2=1
+/**
+ * @brief Set direction (IN1/IN2). TB_DIR_FORWARD = IN1=1, IN2=0 ; TB_DIR_REVERSE = IN1=0, IN2=1
+ * 
+ * If any control pin is invalid, it returns immediatly
+ * 
+ * @param h Motor driver handler
+ * @param m Which motor to move
+ * @param dir Direction of the motor
+ */
 void tb6612_setDirection(tb6612Handle_t *h, EN_tbMotorId m, EN_tbDir dir);
 
-// Coast (IN1=0, IN2=0) or Brake (IN1=1, IN2=1)
+// Coast  or Brake (IN1=1, IN2=1)
+/**
+ * @brief Coast the motor (IN1=0, IN2=0)
+ * 
+ * If any control pin is invalid, it returns immediatly
+ * 
+ * @param h Motor driver handler
+ * @param m Which motor to coast
+ */
 void tb6612_coast(tb6612Handle_t *h, EN_tbMotorId m);
+/**
+ * @brief Brake the motor (IN1=1, IN2=1)
+ * 
+ * If any control pin is invalid, it returns immediatly
+ * 
+ * @param h Motor driver handler
+ * @param m Which motor to brake
+ */
 void tb6612_brake(tb6612Handle_t *h, EN_tbMotorId m);
 
-// Set duty 0..100 % (keeps current direction)
+/**
+ * @brief Set duty 0..100 % and keeps current direction
+ * 
+ * If PWM pin is invalid, it returns immediatly
+ * 
+ * @param h Motor driver handler
+ * @param m Which motor to move
+ * @param dutyPercent value from 0.0 to 100.0
+ */
 void tb6612_setDuty(tb6612Handle_t *h, EN_tbMotorId m, float dutyPercent);
 
-// Convenience: set signed speed -100..100 (sign = direction)
+/**
+ * @brief Set direction and duty based on percentage signal
+ * 
+ * (signedPercent >= 0) ? TB_DIR_FORWARD : TB_DIR_REVERSE
+ * 
+ * @param h Motor driver handler
+ * @param m Which motor to move
+ * @param signedPercent value from -100.0 to 100.0
+ */
 void tb6612_setSpeed(tb6612Handle_t *h, EN_tbMotorId m, float signedPercent);
 
-// Put driver in standby (low-power) or wake it
+/**
+ * @brief Put driver in standby (low-power) or wake it
+ * 
+ * @param h Motor driver handler
+ * @param standby Standby or not
+ */
 void tb6612_setStandby(tb6612Handle_t *h, bool standby);
 
 #endif
