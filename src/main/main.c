@@ -83,14 +83,14 @@ static void mainTask(void *arg)
                 display_uiStatusBarUpdate(false, temp, 55, false, "N/A");
                 display_setUiText("Hello Alfons");
                 tb6612_setSpeed(&motor_ctrl_ctx->motor, MOTOR_A, 50);
-                triac_setPwmPercent(5.0f);
+                triac_setPwrPercent(5.0f);
                 break;
             case BTN_2_PRESSED:
                 ESP_LOGI(TAG, "Button 2 pressed");
                 display_setUiText("Como esta seu dia?");
                 tb6612_setSpeed(&motor_ctrl_ctx->motor, MOTOR_B, 50);
                 pwm += 5;
-                triac_setPwmPercent(pwm);
+                triac_setPwrPercent(pwm);
                 brightness += 5.0f;
                 display_setDispBrightness(brightness);
                 break;
@@ -99,7 +99,7 @@ static void mainTask(void *arg)
                 display_setUiText("Espero que esteja......");
                 tb6612_setSpeed(&motor_ctrl_ctx->motor, MOTOR_A, 100);
                 pwm -= 5;
-                triac_setPwmPercent(pwm);
+                triac_setPwrPercent(pwm);
                 brightness -= 5.0f;
                 display_setDispBrightness(brightness);
                 break;
@@ -109,7 +109,7 @@ static void mainTask(void *arg)
                 tb6612_setSpeed(&motor_ctrl_ctx->motor, MOTOR_B, 100);
                 vTaskDelay(pdMS_TO_TICKS(700));
                 display_setUiText("Muito bom!");
-                triac_setPwmPercent(0.0f);
+                triac_setPwrPercent(0.0f);
                 break;
             default:
                 ESP_LOGW(TAG, "Unknown button press: %d", msg);

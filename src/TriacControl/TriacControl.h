@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include "esp_log.h"
 #include "driver/gpio.h"
-#include "driver/ledc.h"
+#include "esp32-triac-dimmer-driver.h"
 
 /*******************************************************************************
  * MACROS AND DEFINES
@@ -31,11 +31,7 @@ extern void triac_triacInit(void);
  * 
  * @param pwm From 0 to 100
  */
-extern void triac_setPwmPercent(float pwm);
+extern void triac_setPwrPercent(float pwm);
 
-/**
- * @brief Stops the PWM output channel
- */
-extern void triac_stopChannel(void);
 
 #endif // TRIAC_CTRL_H
