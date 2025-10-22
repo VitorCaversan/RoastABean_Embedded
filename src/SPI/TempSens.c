@@ -37,7 +37,10 @@ float tempSens_getTemperature(void)
 
     esp_err_t res = max31855_get_temperature(&max31855Module, &tempInCelcius, &coldJunctionTemp, &scv, &scg, &oc);
     if (res != ESP_OK)
+    {
         ESP_LOGE(TAG, "Failed to measure: %d (%s)", res, esp_err_to_name(res));
+        return TEMP_SENS_INVALID_TEMPERATURE;
+    }
     else
     {
         if (scv) ESP_LOGW(TAG, "Thermocouple shorted to VCC!");
@@ -46,8 +49,6 @@ float tempSens_getTemperature(void)
         ESP_LOGI(TAG, "Temperature: %.2f°C", tempInCelcius);
         return tempInCelcius;
     }
-
-    return TEMP_SENS_INVALID_TEMPERATURE;
 }
 
 float tempSens_getColdJunctionTemperature(void)
