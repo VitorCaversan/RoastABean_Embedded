@@ -10,6 +10,10 @@
 #define USECONDS_IN_1_MIN           60000000
 #define BDC_PID_LOOP_PERIOD_US      200000
 
+#define V_NOMINAL                   127.0f
+#define K_FF                        10.0f // % per unit of (airFlowRatio - 1)
+#define POW_FF                      1.0f
+
 /*******************************************************************************
  * LOCAL FUNCTION DECLARATIONS
  ******************************************************************************/
@@ -30,6 +34,21 @@ static void pidLoopCallback(void *args);
  * @return float Target temperature in °C
  */
 static float getTargetTemperature(ST_pidCtrlContext *ctx, unsigned long usSinceStart);
+
+/**
+ * @brief Calculate the blower feedforward value based on the input voltage
+ * 
+ * Function can be used in case the control loop needs to adjust for varying air
+ * flow due to voltage changes
+ * 
+ * @param voltage Current voltage in Volts
+ * @return float Blower feedforward value in %
+ */
+static inline float blowerFeedforwardFromVoltage(float voltage)
+{
+    float airFlowRatio = pow(voltage / V_NOMINAL, POW_FF);
+    return K_FF * (airFlowRatio - 1.0f);
+}
 
 /*******************************************************************************
  * LOCAL VARIABLES
