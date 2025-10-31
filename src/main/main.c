@@ -51,9 +51,9 @@ void app_main(void)
     display_lcdInit();
     display_uiInit();
     tempSens_init();
+    btn_configButtons();
     triac_triacInit();
     DCMotor_initDcMotors();
-    btn_configButtons();
 
     xTaskCreatePinnedToCore(mainTask, "mainTask", 4096, NULL, configMAX_PRIORITIES - 2, NULL, 1);
 }

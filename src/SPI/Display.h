@@ -22,11 +22,11 @@
  * MACROS AND DEFINES
  ******************************************************************************/
 
-#define USE_LCD_ILI9341  0  // Set to 0 to use ST7789
+#define USE_LCD_ILI9341  1  // Set to 0 to use ST7789
 
-#define LCD_H_RES_IN_PIX    240
+#define LCD_H_RES_IN_PIX    320
 #if USE_LCD_ILI9341
-#define LCD_V_RES_IN_PIX    320
+#define LCD_V_RES_IN_PIX    240
 #else
 #define LCD_V_RES_IN_PIX    240
 #endif

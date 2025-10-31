@@ -14,15 +14,15 @@
 #define MOTOR1_IN_B              GPIO_NUM_37
 #define MOTOR2_IN_A              GPIO_NUM_39
 #define MOTOR2_IN_B              40
-#define MOTOR3_IN_A              46
-#define MOTOR3_IN_B              45
-#define MOTOR4_IN_A              48
-#define MOTOR4_IN_B              19
+#define MOTOR3_IN_A              -1
+#define MOTOR3_IN_B              -1
+#define MOTOR4_IN_A              -1
+#define MOTOR4_IN_B              -1
 
 #define MOTOR1_PWM_PIN              36
 #define MOTOR2_PWM_PIN              41
 #define MOTOR3_PWM_PIN              42
-#define MOTOR4_PWM_PIN              20
+#define MOTOR4_PWM_PIN              48
 
 #define MOTOR_STBY_PIN              47
 
@@ -69,7 +69,7 @@ extern void DCMotor_initDcMotors(void)
     tb6612Config_t cfg2 = {
         .stbyGpio   = MOTOR_STBY_PIN,      // STBY pin (tie HIGH if not using)
         .ain1Gpio   = MOTOR3_IN_A, .ain2Gpio = MOTOR3_IN_B, .pwmaGpio = MOTOR3_PWM_PIN,
-        .bin1Gpio   = MOTOR4_IN_A, .bin2Gpio = -1, .pwmbGpio = -1,
+        .bin1Gpio   = MOTOR4_IN_A, .bin2Gpio = MOTOR4_IN_B, .pwmbGpio = MOTOR4_PWM_PIN,
         .ledcMode   = LEDC_LOW_SPEED_MODE,
         .ledcTimer  = LEDC_TIMER_2,
         .pwmFreqHz  = 5000,

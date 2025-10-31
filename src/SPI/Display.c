@@ -9,9 +9,9 @@
 
 #define PIN_CS       GPIO_NUM_16
 #define PIN_DC       GPIO_NUM_18
-#define PIN_RST      -1 // Not used
+#define PIN_RST      46 // -1 Not used
 #define PIN_LED      GPIO_NUM_3
-#define LCD_MAX_CLK_HZ        24000000  // 24MHz
+#define LCD_MAX_CLK_HZ        10000000  // 10MHz
 
 #define LCD_BCKLIGHT_MODE            LEDC_LOW_SPEED_MODE   // low-speed works on all pins on S3
 #define LCD_BCKLIGHT_TIMER           LEDC_TIMER_0
@@ -68,7 +68,7 @@ extern void display_lcdInit(void)
     ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panelHandle, true));
     ESP_ERROR_CHECK(esp_lcd_panel_mirror(panelHandle, false, false));  // landscape if needed
 #if USE_LCD_ILI9341
-    ESP_ERROR_CHECK(esp_lcd_panel_swap_xy(panelHandle, false));
+    ESP_ERROR_CHECK(esp_lcd_panel_swap_xy(panelHandle, true));
 #endif
 
     // Backlight
@@ -122,7 +122,7 @@ extern void display_uiInit(void)
         .monochrome     = false,         
         .color_format   = LV_COLOR_FORMAT_RGB565,
         .rotation = {                    
-            .swap_xy   = false,           
+            .swap_xy   = true,           
             .mirror_x  = false,           
             .mirror_y  = false
         },

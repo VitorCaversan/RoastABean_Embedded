@@ -145,7 +145,7 @@ void ext_int_init(dimmertyp *ptr)
 		gpio_set_direction(dimZCPin[ptr->current_num], GPIO_MODE_INPUT);
 		gpio_set_intr_type(dimZCPin[ptr->current_num], GPIO_INTR_NEGEDGE);
 		gpio_intr_enable(dimZCPin[ptr->current_num]);
-		gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
+		// gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT); // Already installed in Buttons.c
 		gpio_isr_handler_add(dimZCPin[ptr->current_num], isr_ext, (void *)dimZCPin[ptr->current_num]);
 	}
 	ESP_LOGI(TAG, "Zero Cross interrupt configuration - completed");
