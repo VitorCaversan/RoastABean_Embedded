@@ -16,6 +16,7 @@
 #include "Buttons.h"
 #include "TriacControl.h"
 #include "OSConfig.h"
+#include "PIDControl.h"
 
 /*******************************************************************************
  * MACROS AND DEFINES
@@ -53,6 +54,7 @@ void app_main(void)
     tempSens_init();
     btn_configButtons();
     triac_triacInit();
+    pid_PIDInit();
     DCMotor_initDcMotors();
 
     xTaskCreatePinnedToCore(mainTask, "mainTask", 4096, NULL, configMAX_PRIORITIES - 2, NULL, 1);
@@ -78,38 +80,24 @@ static void mainTask(void *arg)
             {
             case BTN_1_PRESSED:
                 ESP_LOGI(TAG, "Button 1 pressed");
-                temp = tempSens_getTemperature();
-                ESP_LOGI(TAG, "Current Temperature: %.2f°C", temp);
-                display_uiStatusBarUpdate(false, temp, 55, false, "N/A");
-                display_setUiText("Hello Alfons");
-                tb6612_setSpeed(&motor_ctrl_ctx->motor, MOTOR_A, 50);
-                triac_setPwrPercent(5.0f);
+                float *tempProfile = calloc((MAX_ROAST_TIME_IN_MIN / 4), sizeof(float));
+                for (uint32_t i = 0; i < (MAX_ROAST_TIME_IN_MIN / 4); i++)
+                {
+                    tempProfile[i] = random() % 30;
+                }
+
+                display_createRoastChart(tempProfile, (MAX_ROAST_TIME_IN_MIN / 4), NAN, NAN);
+                pid_ctrlLoopStart(tempProfile, (MAX_ROAST_TIME_IN_MIN / 4));
+                free(tempProfile);
                 break;
             case BTN_2_PRESSED:
                 ESP_LOGI(TAG, "Button 2 pressed");
-                display_setUiText("Como esta seu dia?");
-                tb6612_setSpeed(&motor_ctrl_ctx->motor, MOTOR_B, 50);
-                pwm += 5;
-                triac_setPwrPercent(pwm);
-                brightness += 5.0f;
-                display_setDispBrightness(brightness);
                 break;
             case BTN_3_PRESSED:
                 ESP_LOGI(TAG, "Button 3 pressed");
-                display_setUiText("Espero que esteja......");
-                tb6612_setSpeed(&motor_ctrl_ctx->motor, MOTOR_A, 100);
-                pwm -= 5;
-                triac_setPwrPercent(pwm);
-                brightness -= 5.0f;
-                display_setDispBrightness(brightness);
                 break;
             case BTN_4_PRESSED:
                 ESP_LOGI(TAG, "Button 4 pressed");
-                display_setUiText("Uma merda!");
-                tb6612_setSpeed(&motor_ctrl_ctx->motor, MOTOR_B, 100);
-                vTaskDelay(pdMS_TO_TICKS(700));
-                display_setUiText("Muito bom!");
-                triac_setPwrPercent(0.0f);
                 break;
             default:
                 ESP_LOGW(TAG, "Unknown button press: %d", msg);

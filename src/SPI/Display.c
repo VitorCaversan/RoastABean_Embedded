@@ -24,6 +24,12 @@
  * LOCAL FUNCTION DECLARATIONS
  ******************************************************************************/
 
+static lv_coord_t toChartCoord(float v);
+
+static void computeYRangeFromProfile(const float *profile, uint32_t count, float *outMin, float *outMax);
+
+static const char *formatTime(uint32_t totalSecs, char *buf, size_t bufSize);
+
 /*******************************************************************************
  * LOCAL VARIABLES
  ******************************************************************************/
@@ -33,6 +39,7 @@ static const char *TAG = "DISPLAY";
 static esp_lcd_panel_io_handle_t ioHandle = NULL;
 static esp_lcd_panel_handle_t panelHandle = NULL;
 static lv_obj_t *mainLabel = NULL;
+static ST_RoastChartUi roastChartUi = {0};
 
 /*******************************************************************************
  * EXTERNAL FUNCTIONS
@@ -262,6 +269,177 @@ extern void display_uiStatusBarUpdate(bool ethUp, float tempC, int pwm, bool fau
     lvgl_port_unlock();
 }
 
+extern void display_createRoastChart(const float *profile, uint32_t totalMins, float yMin, float yMax)
+{
+    if (totalMins == 0 || totalMins > MAX_ROAST_TIME_IN_MIN)
+        totalMins = MAX_ROAST_TIME_IN_MIN;
+
+    bool ok = lvgl_port_lock(0);
+    if (!ok) { return; }
+
+    roastChartUi.totalMins = totalMins;
+
+    if (!(isfinite(yMin) && isfinite(yMax) && yMax > yMin)) {
+        computeYRangeFromProfile(profile, totalMins, &roastChartUi.yMin, &roastChartUi.yMax);
+    } else {
+        roastChartUi.yMin = yMin;
+        roastChartUi.yMax = yMax;
+    }
+
+    // Screen
+    roastChartUi.screen = lv_obj_create(NULL);
+
+    // Title
+    lv_obj_t *title = lv_label_create(roastChartUi.screen);
+    lv_label_set_text(title, "Roast Profile (°C)");
+    lv_obj_set_style_text_font(title, lv_theme_get_font_large(roastChartUi.screen), 0);
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 6);
+
+    // Chart
+    roastChartUi.chart = lv_chart_create(roastChartUi.screen);
+    lv_obj_set_size(roastChartUi.chart, lv_pct(96), lv_pct(70));
+    lv_obj_align(roastChartUi.chart, LV_ALIGN_CENTER, 0, 10);
+    lv_chart_set_type(roastChartUi.chart, LV_CHART_TYPE_LINE);
+    lv_chart_set_update_mode(roastChartUi.chart, LV_CHART_UPDATE_MODE_SHIFT); // we will address by index anyway
+    lv_chart_set_point_count(roastChartUi.chart, totalMins);
+
+    // Y range and tick marks
+    lv_chart_set_range(roastChartUi.chart, LV_CHART_AXIS_PRIMARY_Y, toChartCoord(roastChartUi.yMin), toChartCoord(roastChartUi.yMax));
+    lv_chart_set_div_line_count(roastChartUi.chart, 6, 6);
+    lv_obj_set_style_pad_left(roastChartUi.chart, 50, 0);   // room for Y labels
+    lv_obj_set_style_pad_bottom(roastChartUi.chart, 30, 0); // room for X labels
+
+    // Axis labels (simple min/max markers)
+    lv_obj_t *yMinLbl = lv_label_create(roastChartUi.screen);
+    lv_label_set_text_fmt(yMinLbl, "%.0f", roastChartUi.yMin);
+    lv_obj_align_to(yMinLbl, roastChartUi.chart, LV_ALIGN_OUT_LEFT_BOTTOM, -4, 0);
+
+    lv_obj_t *yMaxLbl = lv_label_create(roastChartUi.screen);
+    lv_label_set_text_fmt(yMaxLbl, "%.0f", roastChartUi.yMax);
+    lv_obj_align_to(yMaxLbl, roastChartUi.chart, LV_ALIGN_OUT_LEFT_TOP, -4, 0);
+
+    // X-axis min/max (0 min ... totalMins-1)
+    lv_obj_t *xMinLbl = lv_label_create(roastChartUi.screen);
+    lv_label_set_text(xMinLbl, "0m");
+    lv_obj_align_to(xMinLbl, roastChartUi.chart, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 2);
+
+    lv_obj_t *xMaxLbl = lv_label_create(roastChartUi.screen);
+    lv_label_set_text_fmt(xMaxLbl, "%" PRIu32 "m", (totalMins ? totalMins - 1 : 0));
+    lv_obj_align_to(xMaxLbl, roastChartUi.chart, LV_ALIGN_OUT_BOTTOM_RIGHT, 0, 2);
+
+    // Series
+    roastChartUi.seriesTarget  = lv_chart_add_series(roastChartUi.chart, lv_palette_main(LV_PALETTE_ORANGE), LV_CHART_AXIS_PRIMARY_Y);
+    roastChartUi.seriesCurrent = lv_chart_add_series(roastChartUi.chart, lv_palette_main(LV_PALETTE_BLUE),   LV_CHART_AXIS_PRIMARY_Y);
+
+    // Load target profile points
+    for (uint32_t m = 0; m < totalMins; ++m) {
+        float v = isfinite(profile[m]) ? profile[m] : NAN;
+        lv_chart_set_value_by_id(roastChartUi.chart, roastChartUi.seriesTarget, m, isfinite(v) ? toChartCoord(v) : LV_CHART_POINT_NONE);
+    }
+    // Initialize current with "no data"
+    for (uint32_t m = 0; m < totalMins; ++m) {
+        lv_chart_set_value_by_id(roastChartUi.chart, roastChartUi.seriesCurrent, m, LV_CHART_POINT_NONE);
+    }
+
+    // Legend labels
+    lv_obj_t *legend = lv_label_create(roastChartUi.screen);
+    lv_label_set_text(legend, "#ffa500 Target#  #0000ff Current#");
+    lv_label_set_recolor(legend, true);
+    lv_obj_align_to(legend, roastChartUi.chart, LV_ALIGN_OUT_TOP_RIGHT, 0, -4);
+
+    // Info line
+    roastChartUi.labelInfo = lv_label_create(roastChartUi.screen);
+    lv_label_set_text(roastChartUi.labelInfo, "Tnow: --.-°C | Ttgt: --.-°C | Left: --:--");
+    lv_obj_align(roastChartUi.labelInfo, LV_ALIGN_BOTTOM_MID, 0, -6);
+
+    // Load the screen (optional: or attach to existing)
+    lv_scr_load(roastChartUi.screen);
+
+    lvgl_port_unlock();
+}
+
+extern void display_updateRoastChart(const float *profile, uint32_t elapsedSecs, float currentTemp)
+{
+    if (NULL == roastChartUi.screen) return;
+
+    uint32_t minuteIdx = elapsedSecs / 60;
+    if (minuteIdx >= roastChartUi.totalMins) minuteIdx = roastChartUi.totalMins - 1;
+
+    float targetAtMinute = profile[minuteIdx];
+    // We can read back target from the chart series (or keep your tempProfile accessible)
+    // If you prefer direct array access, expose tempProfile[] here.
+    // Below we just read the plotted point (convert back from lv_coord_t).
+    // NOTE: lv_chart_get_point_pos_by_id gives pixel pos, not value; so use your array if available.
+    // For simplicity, pass target array from your context if you want exact numbers on the label.
+    // Here we’ll just skip exact target value if not provided.
+
+    bool ok = lvgl_port_lock(0);
+    if (!ok) return;
+
+    // Plot/overwrite current temp at this minute
+    lv_chart_set_value_by_id(roastChartUi.chart, roastChartUi.seriesCurrent, minuteIdx,
+                             isfinite(currentTemp) ? toChartCoord(currentTemp) : LV_CHART_POINT_NONE);
+
+    // Compose info label
+    char leftBuf[16];
+    uint32_t totalSecs = roastChartUi.totalMins * 60;
+    uint32_t remainingSecs = (elapsedSecs >= totalSecs) ? 0 : (totalSecs - elapsedSecs);
+    formatTime(remainingSecs, leftBuf, sizeof leftBuf);
+
+    // If you keep target array available, replace "--.-" with its value:
+    // e.g., float tgt = tempProfile[minuteIdx];
+    // Here we’ll show "--.-" unless you wire it in.
+    char info[96];
+    snprintf(info, sizeof(info),
+             "Tnow: %.1f°C | Ttgt: %.1f°C | Left: %s",
+             isfinite(currentTemp) ? currentTemp : NAN,
+             targetAtMinute,
+             leftBuf);
+    lv_label_set_text(roastChartUi.labelInfo, info);
+
+    // Optional: keep the chart view scrolled to show progress if totalMins is large
+    // lv_chart_set_zoom_x(roastChartUi.chart, zoomValue); // if you want zooming behaviour
+
+    lv_obj_invalidate(roastChartUi.chart);
+    lvgl_port_unlock();
+}
+
+
 /*******************************************************************************
  * LOCAL FUNCTIONS
  ******************************************************************************/
+
+static lv_coord_t toChartCoord(float v)
+{
+    // lv_coord_t is typically int16_t; clamp to safe range
+    if (v > 32760.0f) v = 32760.0f;
+    if (v < -32760.0f) v = -32760.0f;
+    return (lv_coord_t)lrintf(v);
+}
+
+static void computeYRangeFromProfile(const float *profile, uint32_t count, float *outMin, float *outMax)
+{
+    float mn = 1e9f, mx = -1e9f;
+    for (uint32_t i = 0; i < count; ++i)
+    {
+        if (isfinite(profile[i]))
+        {
+            if (profile[i] < mn) mn = profile[i];
+            if (profile[i] > mx) mx = profile[i];
+        }
+    }
+    if (!isfinite(mn) || !isfinite(mx)) { mn = 0.f; mx = 250.f; }
+    // Add some headroom
+    float pad = fmaxf(5.f, 0.08f * (mx - mn));
+    *outMin = floorf(mn - pad);
+    *outMax = ceilf(mx + pad);
+    if (*outMax <= *outMin) { *outMin = 0.f; *outMax = *outMin + 10.f; }
+}
+
+static const char *formatTime(uint32_t totalSecs, char *buf, size_t bufSize)
+{
+    uint32_t mins = totalSecs / 60;
+    uint32_t secs = totalSecs % 60;
+    snprintf(buf, bufSize, "%02" PRIu32 ":%02" PRIu32, mins, secs);
+    return buf;
+}

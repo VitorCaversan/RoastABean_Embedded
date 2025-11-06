@@ -75,7 +75,8 @@ static void pidLoopCallback(void *args)
         return;
     }
 
-    float targetTemp = getTargetTemperature(ctx, esp_timer_get_time() - ctx->startingProcessUs);
+    unsigned long nowUs = esp_timer_get_time();
+    float targetTemp = getTargetTemperature(ctx, nowUs - ctx->startingProcessUs);
     float error = targetTemp - currTemp;
     
     float newPwrPercent = 0.0f;
@@ -85,6 +86,8 @@ static void pidLoopCallback(void *args)
     if (newPwrPercent > 100.0f)
         newPwrPercent = 100.0f;
     triac_setPwrPercent(newPwrPercent);
+
+    display_updateRoastChart(ctx->tempProfile, US_TO_SECONDS(nowUs - ctx->startingProcessUs), currTemp);
 }
 
 static float getTargetTemperature(ST_pidCtrlContext *ctx, unsigned long usSinceStart)

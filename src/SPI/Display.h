@@ -5,6 +5,8 @@
  * INCLUDES
  ******************************************************************************/
 #include <stdio.h>
+#include <inttypes.h>
+#include <math.h>
 #include "driver/gpio.h"
 #include "lvgl.h"
 #include "esp_lvgl_port.h"
@@ -17,6 +19,7 @@
 #include "driver/ledc.h"
 
 #include "SpiConfig.h"
+#include "PIDControl.h"
 
 /*******************************************************************************
  * MACROS AND DEFINES
@@ -34,6 +37,18 @@
 /*******************************************************************************
  * TYPEDEFS AND STRUCTURES
  ******************************************************************************/
+
+typedef struct ST_RoastChartUi
+{
+    lv_obj_t *screen;
+    lv_obj_t *chart;
+    lv_chart_series_t *seriesTarget;
+    lv_chart_series_t *seriesCurrent;
+    lv_obj_t *labelInfo;
+    uint32_t totalMins;
+    float yMin;
+    float yMax;
+} ST_RoastChartUi;
 
 /*******************************************************************************
  * EXTERNAL FUNCTION DECLARATIONS
@@ -73,5 +88,25 @@ extern void display_setUiText(const char* text);
  * @param timeStr Formatted time string (e.g., "12:34"), or NULL/empty for no time
  */
 extern void display_uiStatusBarUpdate(bool ethUp, float tempC, int pwm, bool fault, const char *timeStr);
+
+/**
+ * @brief Create a Roast Chart UI screen
+ * 
+ * @param profile The temperature profile array (°C/min)
+ * @param totalMins Total duration of the roast (minutes)
+ * @param yMin Minimum Y-axis value. If both NAN, auto-fit from profile
+ * @param yMax Maximum Y-axis value. If both NAN, auto-fit from profile
+ */
+extern void display_createRoastChart(const float *profile, uint32_t totalMins, float yMin, float yMax);
+
+/**
+ * @brief Update the current temperature point at the corresponding minute index
+ * and refresh the info label.
+ *
+ * @param profile The temperature profile array (°C/min)
+ * @param elapsedSecs seconds since roast start
+ * @param currentTemp latest measured temperature (°C)
+ */
+extern void display_updateRoastChart(const float *profile, uint32_t elapsedSecs, float currentTemp);
 
 #endif // DISPLAY_H
