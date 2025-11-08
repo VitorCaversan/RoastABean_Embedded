@@ -17,6 +17,7 @@
 #include "TriacControl.h"
 #include "OSConfig.h"
 #include "PIDControl.h"
+#include "Screens.h"
 
 /*******************************************************************************
  * MACROS AND DEFINES
@@ -36,6 +37,7 @@ static void mainTask(void *arg);
  ******************************************************************************/
 
 QueueHandle_t OS_mainTaskQueue = NULL;
+QueueHandle_t OS_screensTaskQueue = NULL;
 
 static const char *TAG = "MAIN";
 
@@ -47,6 +49,8 @@ void app_main(void)
 {
     OS_mainTaskQueue = xQueueCreate(32, sizeof(EN_buttons));
     configASSERT(OS_mainTaskQueue != NULL);
+    OS_screensTaskQueue = xQueueCreate(32, sizeof(ST_screenMsg));
+    configASSERT(OS_screensTaskQueue != NULL);
 
     spiConfig_configureSpiBus();
     display_lcdInit();
@@ -58,6 +62,7 @@ void app_main(void)
     DCMotor_initDcMotors();
 
     xTaskCreatePinnedToCore(mainTask, "mainTask", 4096, NULL, configMAX_PRIORITIES - 2, NULL, 1);
+    xTaskCreatePinnedToCore(scr_screensTask, "screensTask", 8192, NULL, configMAX_PRIORITIES - 3, NULL, 1);
 }
 
 static void mainTask(void *arg)
@@ -106,9 +111,9 @@ static void mainTask(void *arg)
         }
         else
         {
-            ESP_LOGI(TAG, "Current pwm %.2f%%", pwm);
-            temp = tempSens_getTemperature();
-            ESP_LOGI(TAG, "Current Temperature: %.2f°C", temp);
+            // ESP_LOGI(TAG, "Current pwm %.2f%%", pwm);
+            // temp = tempSens_getTemperature();
+            // ESP_LOGI(TAG, "Current Temperature: %.2f°C", temp);
         }
         // the following logging format is according to the requirement of serial-studio frame format
         // also see the dashboard config file `serial-studio-dashboard.json` for more information

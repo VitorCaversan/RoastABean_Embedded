@@ -16,6 +16,7 @@
  ******************************************************************************/
 
 extern QueueHandle_t OS_mainTaskQueue;
+extern QueueHandle_t OS_screensTaskQueue;
 
 /*******************************************************************************
  * EXTERNAL FUNCTION DECLARATIONS

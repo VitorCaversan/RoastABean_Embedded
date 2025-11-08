@@ -100,13 +100,13 @@ extern void display_uiStatusBarUpdate(bool ethUp, float tempC, int pwm, bool fau
 extern void display_createRoastChart(const float *profile, uint32_t totalMins, float yMin, float yMax);
 
 /**
- * @brief Update the current temperature point at the corresponding minute index
+ * @brief Update the current temperature point at the corresponding second
  * and refresh the info label.
  *
- * @param profile The temperature profile array (°C/min)
+ * @param currTargetTemp Current target temperature at this moment (°C)
  * @param elapsedSecs seconds since roast start
  * @param currentTemp latest measured temperature (°C)
  */
-extern void display_updateRoastChart(const float *profile, uint32_t elapsedSecs, float currentTemp);
+extern void display_updateRoastChart(float currTargetTemp, uint32_t elapsedSecs, float currentTemp);
 
 #endif // DISPLAY_H

@@ -15,6 +15,7 @@
 #include "OSConfig.h"
 #include "TriacControl.h"
 #include "TempSens.h"
+#include "Screens.h"
 
 /*******************************************************************************
  * MACROS AND DEFINES

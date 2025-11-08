@@ -358,14 +358,13 @@ extern void display_createRoastChart(const float *profile, uint32_t totalMins, f
     lvgl_port_unlock();
 }
 
-extern void display_updateRoastChart(const float *profile, uint32_t elapsedSecs, float currentTemp)
+extern void display_updateRoastChart(float currTargetTemp, uint32_t elapsedSecs, float currentTemp)
 {
     if (NULL == roastChartUi.screen) return;
 
     uint32_t minuteIdx = elapsedSecs / 60;
     if (minuteIdx >= roastChartUi.totalMins) minuteIdx = roastChartUi.totalMins - 1;
 
-    float targetAtMinute = profile[minuteIdx];
     // We can read back target from the chart series (or keep your tempProfile accessible)
     // If you prefer direct array access, expose tempProfile[] here.
     // Below we just read the plotted point (convert back from lv_coord_t).
@@ -377,8 +376,11 @@ extern void display_updateRoastChart(const float *profile, uint32_t elapsedSecs,
     if (!ok) return;
 
     // Plot/overwrite current temp at this minute
-    lv_chart_set_value_by_id(roastChartUi.chart, roastChartUi.seriesCurrent, minuteIdx,
-                             isfinite(currentTemp) ? toChartCoord(currentTemp) : LV_CHART_POINT_NONE);
+    if ((elapsedSecs % 60) == 0)
+    {
+        lv_chart_set_value_by_id(roastChartUi.chart, roastChartUi.seriesCurrent, minuteIdx,
+                                 isfinite(currentTemp) ? toChartCoord(currentTemp) : LV_CHART_POINT_NONE);
+    }
 
     // Compose info label
     char leftBuf[16];
@@ -393,7 +395,7 @@ extern void display_updateRoastChart(const float *profile, uint32_t elapsedSecs,
     snprintf(info, sizeof(info),
              "Tnow: %.1f°C | Ttgt: %.1f°C | Left: %s",
              isfinite(currentTemp) ? currentTemp : NAN,
-             targetAtMinute,
+             currTargetTemp,
              leftBuf);
     lv_label_set_text(roastChartUi.labelInfo, info);
 

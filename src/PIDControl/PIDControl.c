@@ -56,6 +56,7 @@ static inline float blowerFeedforwardFromVoltage(float voltage)
 
 ST_pidCtrlContext pidRoastCtrlBlock = {0};
 esp_timer_handle_t pidLoopTimer = NULL;
+ST_chartUpdateData chartUpdateData = {0};
 
 static const char *TAG = "PID_CTRL";
 
@@ -87,7 +88,22 @@ static void pidLoopCallback(void *args)
         newPwrPercent = 100.0f;
     triac_setPwrPercent(newPwrPercent);
 
-    display_updateRoastChart(ctx->tempProfile, US_TO_SECONDS(nowUs - ctx->startingProcessUs), currTemp);
+    chartUpdateData.currTargetTemp = targetTemp;
+    chartUpdateData.elapsedSecs = US_TO_SECONDS(nowUs - ctx->startingProcessUs);
+    chartUpdateData.currentTemp = currTemp;
+
+    ST_screenMsg screenMsg = {
+        .event = SCR_EVENT_UPDATE_CHART,
+        .data = &chartUpdateData
+    };
+
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    xQueueSendFromISR(OS_screensTaskQueue, &screenMsg, &xHigherPriorityTaskWoken);
+    
+    if (xHigherPriorityTaskWoken)
+    {
+        portYIELD_FROM_ISR();
+    }
 }
 
 static float getTargetTemperature(ST_pidCtrlContext *ctx, unsigned long usSinceStart)
