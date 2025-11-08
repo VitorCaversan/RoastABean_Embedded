@@ -127,7 +127,7 @@ extern void display_uiInit(void)
         .hres           = LCD_H_RES_IN_PIX,     
         .vres           = LCD_V_RES_IN_PIX,     
         .monochrome     = false,         
-        .color_format   = LV_COLOR_FORMAT_RGB565,
+        .color_format   = LV_COLOR_FORMAT_RGB565,  // LVGL uses RGB internally
         .rotation = {                    
             .swap_xy   = true,           
             .mirror_x  = false,           
@@ -288,6 +288,8 @@ extern void display_createRoastChart(const float *profile, uint32_t totalMins, f
 
     // Screen
     roastChartUi.screen = lv_obj_create(NULL);
+    lv_obj_set_style_bg_color(roastChartUi.screen, lv_palette_main(LV_PALETTE_NONE), 0);  // Light brown/tan (RGB)
+    lv_obj_set_style_bg_opa(roastChartUi.screen, LV_OPA_COVER, 0);
 
     // Title
     lv_obj_t *title = lv_label_create(roastChartUi.screen);
@@ -297,7 +299,7 @@ extern void display_createRoastChart(const float *profile, uint32_t totalMins, f
 
     // Chart
     roastChartUi.chart = lv_chart_create(roastChartUi.screen);
-    lv_obj_set_size(roastChartUi.chart, lv_pct(96), lv_pct(70));
+    lv_obj_set_size(roastChartUi.chart, lv_pct(85), lv_pct(60));
     lv_obj_align(roastChartUi.chart, LV_ALIGN_CENTER, 0, 10);
     lv_chart_set_type(roastChartUi.chart, LV_CHART_TYPE_LINE);
     lv_chart_set_update_mode(roastChartUi.chart, LV_CHART_UPDATE_MODE_SHIFT); // we will address by index anyway
@@ -305,31 +307,36 @@ extern void display_createRoastChart(const float *profile, uint32_t totalMins, f
 
     // Y range and tick marks
     lv_chart_set_range(roastChartUi.chart, LV_CHART_AXIS_PRIMARY_Y, toChartCoord(roastChartUi.yMin), toChartCoord(roastChartUi.yMax));
+    lv_chart_set_range(roastChartUi.chart, LV_CHART_AXIS_PRIMARY_X, toChartCoord(0), toChartCoord(totalMins - 1));
     lv_chart_set_div_line_count(roastChartUi.chart, 6, 6);
-    lv_obj_set_style_pad_left(roastChartUi.chart, 50, 0);   // room for Y labels
-    lv_obj_set_style_pad_bottom(roastChartUi.chart, 30, 0); // room for X labels
+    
+    // Padding for the chart drawing area (inside the white grid box)
+    // lv_obj_set_style_pad_left(roastChartUi.chart, 35, LV_PART_MAIN);   // room for Y labels
+    // lv_obj_set_style_pad_bottom(roastChartUi.chart, 25, LV_PART_MAIN); // room for X labels
 
     // Axis labels (simple min/max markers)
     lv_obj_t *yMinLbl = lv_label_create(roastChartUi.screen);
-    lv_label_set_text_fmt(yMinLbl, "%.0f", roastChartUi.yMin);
+    lv_label_set_text_fmt(yMinLbl, "%d", (int)roastChartUi.yMin);
+    ESP_LOGI(TAG, "YMin: %.1f", roastChartUi.yMin);
     lv_obj_align_to(yMinLbl, roastChartUi.chart, LV_ALIGN_OUT_LEFT_BOTTOM, -4, 0);
 
     lv_obj_t *yMaxLbl = lv_label_create(roastChartUi.screen);
-    lv_label_set_text_fmt(yMaxLbl, "%.0f", roastChartUi.yMax);
+    lv_label_set_text_fmt(yMaxLbl, "%d", (int)roastChartUi.yMax);
+    ESP_LOGI(TAG, "YMax: %.1f", roastChartUi.yMax);
     lv_obj_align_to(yMaxLbl, roastChartUi.chart, LV_ALIGN_OUT_LEFT_TOP, -4, 0);
 
     // X-axis min/max (0 min ... totalMins-1)
     lv_obj_t *xMinLbl = lv_label_create(roastChartUi.screen);
-    lv_label_set_text(xMinLbl, "0m");
+    lv_label_set_text(xMinLbl, "0min");
     lv_obj_align_to(xMinLbl, roastChartUi.chart, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 2);
 
     lv_obj_t *xMaxLbl = lv_label_create(roastChartUi.screen);
-    lv_label_set_text_fmt(xMaxLbl, "%" PRIu32 "m", (totalMins ? totalMins - 1 : 0));
+    lv_label_set_text_fmt(xMaxLbl, "%" PRIu32 "min", (totalMins ? totalMins - 1 : 0));
     lv_obj_align_to(xMaxLbl, roastChartUi.chart, LV_ALIGN_OUT_BOTTOM_RIGHT, 0, 2);
 
-    // Series
+    // Series - use standard RGB colors
     roastChartUi.seriesTarget  = lv_chart_add_series(roastChartUi.chart, lv_palette_main(LV_PALETTE_ORANGE), LV_CHART_AXIS_PRIMARY_Y);
-    roastChartUi.seriesCurrent = lv_chart_add_series(roastChartUi.chart, lv_palette_main(LV_PALETTE_BLUE),   LV_CHART_AXIS_PRIMARY_Y);
+    roastChartUi.seriesCurrent = lv_chart_add_series(roastChartUi.chart, lv_palette_main(LV_PALETTE_BLUE), LV_CHART_AXIS_PRIMARY_Y);
 
     // Load target profile points
     for (uint32_t m = 0; m < totalMins; ++m) {
@@ -343,7 +350,7 @@ extern void display_createRoastChart(const float *profile, uint32_t totalMins, f
 
     // Legend labels
     lv_obj_t *legend = lv_label_create(roastChartUi.screen);
-    lv_label_set_text(legend, "#ffa500 Target#  #0000ff Current#");
+    lv_label_set_text(legend, "#FF8000 Target#  #0080FF Current#");  // RGB format
     lv_label_set_recolor(legend, true);
     lv_obj_align_to(legend, roastChartUi.chart, LV_ALIGN_OUT_TOP_RIGHT, 0, -4);
 
