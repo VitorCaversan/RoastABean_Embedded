@@ -36,6 +36,8 @@ typedef struct {
     uint64_t event_count;
 } example_queue_element_t;
 
+static void IRAM_ATTR isr_ext(void* arg);
+static bool IRAM_ATTR onTimerISR(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_ctx);
 
 dimmertyp *createDimmer(gpio_num_t user_dimmer_pin, gpio_num_t zc_dimmer_pin)
 {

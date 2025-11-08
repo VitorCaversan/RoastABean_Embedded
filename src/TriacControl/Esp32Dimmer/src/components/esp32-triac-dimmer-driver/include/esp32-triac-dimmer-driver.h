@@ -80,8 +80,5 @@ void port_init(dimmertyp *ptr);
 void config_timer(int freq);
 void ext_int_init(dimmertyp *ptr);
 
-static void IRAM_ATTR isr_ext(void* arg);
-static bool IRAM_ATTR onTimerISR(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_ctx);
-
 
 #endif
