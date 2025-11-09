@@ -309,10 +309,12 @@ static void IRAM_ATTR isr_ext(void *arg)
 #endif
 
 	for (int i = 0; i < current_dim; i++)
+	{
 		if (dimState[i] == ON)
 		{
 			zeroCross[i] = 1;
 		}
+	}
 }
 
 static int k;

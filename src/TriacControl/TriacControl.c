@@ -46,5 +46,6 @@ extern void triac_setPwrPercent(float pwr)
     if (pwr > 100.0f)
         pwr = 100.0f;
     
+    ESP_LOGI(TAG, "Set triac power to %.1f%%", pwr);
     setPower(triacDimmer, (int)pwr);
 }

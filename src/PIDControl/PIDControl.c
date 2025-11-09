@@ -60,6 +60,56 @@ ST_chartUpdateData chartUpdateData = {0};
 
 static const char *TAG = "PID_CTRL";
 
+
+/*******************************************************************************
+ * EXTERNAL FUNCTIONS
+ ******************************************************************************/
+
+extern void pid_PIDInit(void)
+{
+    ESP_LOGI(TAG, "Create PID control block");
+    pid_ctrl_parameter_t pid_runtime_param = {
+        .kp = 0.6,
+        .ki = 0.4,
+        .kd = 0.0,
+        .max_output   = 75.0,
+        .min_output   = 17.0,
+        .max_integral = 100.0, // Anti-windup: 80% -> +-40/0.4 ~= +-100
+        .min_integral = -100.0,
+        .cal_type = PID_CAL_TYPE_POSITIONAL,
+    };
+    pid_ctrl_config_t pid_config = {
+        .init_param = pid_runtime_param,
+    };
+    ESP_ERROR_CHECK(pid_new_control_block(&pid_config, &pidRoastCtrlBlock.pidCtrl));
+}
+
+extern void pid_ctrlLoopStart(float *tempProfile, unsigned long minsToControl)
+{
+    pidRoastCtrlBlock.startingProcessUs = esp_timer_get_time();
+    pidRoastCtrlBlock.minsToControl = minsToControl;
+    memcpy(pidRoastCtrlBlock.tempProfile, tempProfile, minsToControl * sizeof(float));
+
+    ESP_LOGI(TAG, "Create a timer to do PID calculation periodically");
+    const esp_timer_create_args_t periodic_timer_args = {
+        .callback = pidLoopCallback,
+        .arg = &pidRoastCtrlBlock,
+        .name = "pid_loop"
+    };
+    pidLoopTimer = NULL;
+    ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &pidLoopTimer));
+
+    ESP_LOGI(TAG, "Start PID control loop");
+    ESP_ERROR_CHECK(esp_timer_start_periodic(pidLoopTimer, BDC_PID_LOOP_PERIOD_US));
+}
+
+extern void pid_ctrlLoopStop(void)
+{
+    ESP_LOGI(TAG, "Stop PID control loop");
+    esp_timer_delete(pidLoopTimer);
+    pidLoopTimer = NULL;
+}
+
 /*******************************************************************************
  * LOCAL FUNCTIONS
  ******************************************************************************/
@@ -119,53 +169,4 @@ static float getTargetTemperature(ST_pidCtrlContext *ctx, unsigned long usSinceS
     float fraction = (float)(usSinceStart % USECONDS_IN_1_MIN) / USECONDS_IN_1_MIN;
 
     return (lowerTemp + ((upperTemp - lowerTemp) * fraction));
-}
-
-/*******************************************************************************
- * EXTERNAL FUNCTIONS
- ******************************************************************************/
-
-extern void pid_PIDInit(void)
-{
-    ESP_LOGI(TAG, "Create PID control block");
-    pid_ctrl_parameter_t pid_runtime_param = {
-        .kp = 0.6,
-        .ki = 0.4,
-        .kd = 0.0,
-        .max_output   = 100,
-        .min_output   = 0,
-        .max_integral = 1000,
-        .min_integral = -1000,
-        .cal_type = PID_CAL_TYPE_POSITIONAL,
-    };
-    pid_ctrl_config_t pid_config = {
-        .init_param = pid_runtime_param,
-    };
-    ESP_ERROR_CHECK(pid_new_control_block(&pid_config, &pidRoastCtrlBlock.pidCtrl));
-}
-
-extern void pid_ctrlLoopStart(float *tempProfile, unsigned long minsToControl)
-{
-    pidRoastCtrlBlock.startingProcessUs = esp_timer_get_time();
-    pidRoastCtrlBlock.minsToControl = minsToControl;
-    memcpy(pidRoastCtrlBlock.tempProfile, tempProfile, minsToControl * sizeof(float));
-
-    ESP_LOGI(TAG, "Create a timer to do PID calculation periodically");
-    const esp_timer_create_args_t periodic_timer_args = {
-        .callback = pidLoopCallback,
-        .arg = &pidRoastCtrlBlock,
-        .name = "pid_loop"
-    };
-    pidLoopTimer = NULL;
-    ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &pidLoopTimer));
-
-    ESP_LOGI(TAG, "Start PID control loop");
-    ESP_ERROR_CHECK(esp_timer_start_periodic(pidLoopTimer, BDC_PID_LOOP_PERIOD_US));
-}
-
-extern void pid_ctrlLoopStop(void)
-{
-    ESP_LOGI(TAG, "Stop PID control loop");
-    esp_timer_delete(pidLoopTimer);
-    pidLoopTimer = NULL;
 }
