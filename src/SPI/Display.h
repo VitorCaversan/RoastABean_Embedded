@@ -20,6 +20,7 @@
 
 #include "SpiConfig.h"
 #include "PIDControl.h"
+#include "Buttons.h"
 
 /*******************************************************************************
  * MACROS AND DEFINES
@@ -33,6 +34,8 @@
 #else
 #define LCD_V_RES_IN_PIX    240
 #endif
+
+#define MAIN_MENU_OPTION_COUNT    3
 
 /*******************************************************************************
  * TYPEDEFS AND STRUCTURES
@@ -49,6 +52,24 @@ typedef struct ST_RoastChartUi
     float yMin;
     float yMax;
 } ST_RoastChartUi;
+
+typedef struct ST_StartMenuUi
+{
+    lv_obj_t *screen;
+    lv_obj_t *menuContainer;
+    lv_obj_t *menuOptions[MAIN_MENU_OPTION_COUNT];
+    lv_obj_t *bottomBar;
+    lv_obj_t *btnReturn;
+    lv_obj_t *btnUp;
+    lv_obj_t *btnDown;
+    lv_obj_t *btnSelect;
+
+    lv_style_t styleItem;
+    lv_style_t styleItemSelected;
+    lv_style_t styleBottomBar;
+
+    int selectedIndex; // 0..2
+} ST_StartMenuUi;
 
 /*******************************************************************************
  * EXTERNAL FUNCTION DECLARATIONS
@@ -108,5 +129,24 @@ extern void display_createRoastChart(const float *profile, uint32_t totalMins, f
  * @param currentTemp latest measured temperature (°C)
  */
 extern void display_updateRoastChart(float currTargetTemp, uint32_t elapsedSecs, float currentTemp);
+
+/**
+ * @brief Create the start menu UI
+ */
+extern void display_createStartMenu();
+
+/**
+ * @brief Apply the selection style to the start menu UI
+ * 
+ * @param ui Pointer to the start menu UI structure
+ */
+extern void display_applySelectionStyle(ST_StartMenuUi *ui);
+
+/**
+ * @brief Get pointer to the start menu UI structure
+ * 
+ * @return Pointer to the start menu UI structure
+ */
+extern ST_StartMenuUi *display_getStartMenuUi(void);
 
 #endif // DISPLAY_H

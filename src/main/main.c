@@ -25,6 +25,7 @@
 
 // Enable this config,  we will print debug formated string, which in return can be captured and parsed by Serial-Studio
 #define SERIAL_STUDIO_DEBUG           CONFIG_SERIAL_STUDIO_DEBUG
+#define BUTTON_DEBUG                 0
 
 /*******************************************************************************
  * LOCAL FUNCTION DECLARATIONS
@@ -55,6 +56,8 @@ void app_main(void)
     spiConfig_configureSpiBus();
     display_lcdInit();
     display_uiInit();
+    display_createStartMenu();
+    scr_screensInit();
     tempSens_init();
     btn_configButtons();
     triac_triacInit();
@@ -83,6 +86,26 @@ static void mainTask(void *arg)
         {
             switch (msg)
             {
+                case BTN_1_PRESSED:
+                    ESP_LOGI(TAG, "Button 1 pressed");
+                    scr_onBtnPress(BTN_1_PRESSED);
+                break;
+                case BTN_2_PRESSED:
+                    ESP_LOGI(TAG, "Button 2 pressed");
+                    scr_onBtnPress(BTN_2_PRESSED);
+                break;
+                case BTN_3_PRESSED:
+                    ESP_LOGI(TAG, "Button 3 pressed");
+                    scr_onBtnPress(BTN_3_PRESSED);
+                break;
+                case BTN_4_PRESSED:
+                    ESP_LOGI(TAG, "Button 4 pressed");
+                    scr_onBtnPress(BTN_4_PRESSED);
+                break;
+                default:
+                    ESP_LOGW(TAG, "Unknown button press: %d", msg);
+                break;
+#if BUTTON_DEBUG
             case BTN_1_PRESSED:
                 ESP_LOGI(TAG, "Button 1 pressed");
                 float currTemp = tempSens_getTemperature();
@@ -113,6 +136,7 @@ static void mainTask(void *arg)
             default:
                 ESP_LOGW(TAG, "Unknown button press: %d", msg);
                 break;
+#endif
             }
         }
         else
