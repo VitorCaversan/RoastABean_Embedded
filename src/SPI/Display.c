@@ -55,6 +55,7 @@ static lv_obj_t *mainLabel = NULL;
 static ST_RoastChartUi roastChartUi = {0};
 static ST_VerticalMenuUi mainMenuUi = {0};
 static ST_VerticalMenuUi selectRoastMenuUi = {0};
+static ST_PopupUi confirmationPopupUi = {0};
 
 static const char *menuLabels[] = {
     "Roast",
@@ -506,6 +507,116 @@ extern ST_VerticalMenuUi *display_getSelectRoastMenuUi(void)
     return &selectRoastMenuUi;
 }
 
+extern void display_createConfirmationPopup(const char *message)
+{
+    bool ok = lvgl_port_lock(0);
+    if (!ok) {
+        ESP_LOGE(TAG, "[X] Failed to acquire LVGL lock");
+        return;
+    }
+
+    // If popup already exists, just update the message
+    if (confirmationPopupUi.overlay != NULL) {
+        if (confirmationPopupUi.messageLabel != NULL) {
+            lv_label_set_text(confirmationPopupUi.messageLabel, message);
+        }
+        lvgl_port_unlock();
+        return;
+    }
+
+    // Create semi-transparent overlay background as a new screen layer
+    confirmationPopupUi.overlay = lv_obj_create(lv_layer_top());
+    lv_obj_set_size(confirmationPopupUi.overlay, LCD_H_RES_IN_PIX, LCD_V_RES_IN_PIX);
+    lv_obj_set_pos(confirmationPopupUi.overlay, 0, 0);
+    lv_obj_set_style_bg_color(confirmationPopupUi.overlay, lv_color_black(), 0);
+    lv_obj_set_style_bg_opa(confirmationPopupUi.overlay, LV_OPA_0, 0);
+    lv_obj_set_style_border_width(confirmationPopupUi.overlay, 0, 0);
+    lv_obj_set_style_pad_all(confirmationPopupUi.overlay, 0, 0);
+    lv_obj_set_style_radius(confirmationPopupUi.overlay, 0, 0);
+    lv_obj_clear_flag(confirmationPopupUi.overlay, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(confirmationPopupUi.overlay, LV_OBJ_FLAG_HIDDEN); // Start hidden
+
+    // Create white balloon container
+    lv_style_reset(&confirmationPopupUi.styleContainer);
+    lv_style_init(&confirmationPopupUi.styleContainer);
+    lv_style_set_bg_color(&confirmationPopupUi.styleContainer, lv_color_white());
+    lv_style_set_bg_opa(&confirmationPopupUi.styleContainer, LV_OPA_COVER);
+    lv_style_set_border_width(&confirmationPopupUi.styleContainer, 2);
+    lv_style_set_border_color(&confirmationPopupUi.styleContainer, lv_color_hex(0x404040));
+    lv_style_set_radius(&confirmationPopupUi.styleContainer, 12);
+    lv_style_set_pad_all(&confirmationPopupUi.styleContainer, 16);
+    lv_style_set_shadow_width(&confirmationPopupUi.styleContainer, 20);
+    lv_style_set_shadow_opa(&confirmationPopupUi.styleContainer, LV_OPA_30);
+
+    confirmationPopupUi.container = lv_obj_create(confirmationPopupUi.overlay);
+    lv_obj_add_style(confirmationPopupUi.container, &confirmationPopupUi.styleContainer, 0);
+    lv_obj_set_size(confirmationPopupUi.container, lv_pct(80), LV_SIZE_CONTENT);
+    lv_obj_center(confirmationPopupUi.container);
+    lv_obj_set_flex_flow(confirmationPopupUi.container, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(confirmationPopupUi.container, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_clear_flag(confirmationPopupUi.container, LV_OBJ_FLAG_SCROLLABLE);
+
+    // Message label
+    confirmationPopupUi.messageLabel = lv_label_create(confirmationPopupUi.container);
+    lv_label_set_text(confirmationPopupUi.messageLabel, message);
+    lv_label_set_long_mode(confirmationPopupUi.messageLabel, LV_LABEL_LONG_WRAP);
+    lv_obj_set_width(confirmationPopupUi.messageLabel, lv_pct(100));
+    lv_obj_set_style_text_color(confirmationPopupUi.messageLabel, lv_color_black(), 0);
+    lv_obj_set_style_text_align(confirmationPopupUi.messageLabel, LV_TEXT_ALIGN_CENTER, 0);
+
+    // Bottom button bar (overlaid on top of screen's bottom bar)
+    lv_style_reset(&confirmationPopupUi.styleBottomBar);
+    lv_style_init(&confirmationPopupUi.styleBottomBar);
+    lv_style_set_bg_opa(&confirmationPopupUi.styleBottomBar, LV_OPA_COVER);
+    lv_style_set_bg_color(&confirmationPopupUi.styleBottomBar, lv_color_hex(0x202020));
+    lv_style_set_border_width(&confirmationPopupUi.styleBottomBar, 0);
+    lv_style_set_pad_all(&confirmationPopupUi.styleBottomBar, 6);
+
+    confirmationPopupUi.bottomBar = lv_obj_create(confirmationPopupUi.overlay);
+    lv_obj_add_style(confirmationPopupUi.bottomBar, &confirmationPopupUi.styleBottomBar, 0);
+    lv_obj_set_width(confirmationPopupUi.bottomBar, lv_pct(100));
+    lv_obj_set_height(confirmationPopupUi.bottomBar, 44);
+    lv_obj_align(confirmationPopupUi.bottomBar, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_set_flex_flow(confirmationPopupUi.bottomBar, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(confirmationPopupUi.bottomBar, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    // Cancel button (left)
+    confirmationPopupUi.btnCancel = lv_btn_create(confirmationPopupUi.bottomBar);
+    lv_obj_set_size(confirmationPopupUi.btnCancel, 70, 28);
+    lv_obj_t *lblCancel = lv_label_create(confirmationPopupUi.btnCancel);
+    lv_label_set_text(lblCancel, LV_SYMBOL_CLOSE);
+    lv_obj_center(lblCancel);
+
+    // Confirm button (right)
+    confirmationPopupUi.btnConfirm = lv_btn_create(confirmationPopupUi.bottomBar);
+    lv_obj_set_size(confirmationPopupUi.btnConfirm, 70, 28);
+    lv_obj_t *lblConfirm = lv_label_create(confirmationPopupUi.btnConfirm);
+    lv_label_set_text(lblConfirm, LV_SYMBOL_OK);
+    lv_obj_center(lblConfirm);
+
+    lvgl_port_unlock();
+}
+
+extern void display_showConfirmationPopup(void)
+{
+    if (confirmationPopupUi.overlay != NULL) {
+        bool ok = lvgl_port_lock(0);
+        if (!ok) { return; }
+        lv_obj_clear_flag(confirmationPopupUi.overlay, LV_OBJ_FLAG_HIDDEN);
+        lvgl_port_unlock();
+    }
+}
+
+extern void display_hideConfirmationPopup(void)
+{
+    if (confirmationPopupUi.overlay != NULL) {
+        bool ok = lvgl_port_lock(0);
+        if (!ok) { return; }
+        lv_obj_add_flag(confirmationPopupUi.overlay, LV_OBJ_FLAG_HIDDEN);
+        lvgl_port_unlock();
+    }
+}
+
 /*******************************************************************************
  * LOCAL FUNCTIONS
  ******************************************************************************/
@@ -637,7 +748,7 @@ static void createVerticalMenuUi(ST_VerticalMenuUi *vertMenuUi, const char *menu
     lv_obj_set_height(vertMenuUi->bottomBar, 44);
     lv_obj_align(vertMenuUi->bottomBar, LV_ALIGN_BOTTOM_MID, 0, 0);
     lv_obj_set_flex_flow(vertMenuUi->bottomBar, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(vertMenuUi->bottomBar, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_flex_align(vertMenuUi->bottomBar, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     vertMenuUi->btnReturn = lv_btn_create(vertMenuUi->bottomBar);
     lv_obj_set_size(vertMenuUi->btnReturn, 70, 28);

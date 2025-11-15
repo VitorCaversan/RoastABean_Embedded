@@ -26,16 +26,19 @@ static void updateChart(const ST_chartUpdateData *data);
  * @param onBtn3Pressed Callback for button 3 (can be NULL)
  * @param onBtn4Pressed Callback for button 4 (can be NULL)
  */
-static void display_setBtnsCallbacks(void (*onBtn1Pressed)(void),
-                                     void (*onBtn2Pressed)(void),
-                                     void (*onBtn3Pressed)(void),
-                                     void (*onBtn4Pressed)(void));
+static void setBtnsCallbacks(void (*onBtn1Pressed)(void),
+                             void (*onBtn2Pressed)(void),
+                             void (*onBtn3Pressed)(void),
+                             void (*onBtn4Pressed)(void));
 
 /**
  * @defgroup MainMenuButtons Main menu button handlers
  * @brief Navigation and selection logic for the start menu.
  * 
- * Functions: moveSelectionUpMainMenu(), moveSelectionDownMainMenu(), onSelectMainMenu(), setSelectRoastMenu().
+ * Functions: moveSelectionUpMainMenu(),
+ * moveSelectionDownMainMenu(),
+ * onSelectMainMenu(),
+ * setSelectRoastMenu().
  */
 static void moveSelectionUpMainMenu(void);
 static void moveSelectionDownMainMenu(void);
@@ -43,10 +46,34 @@ static void onSelectMainMenu(void);
 static void setSelectRoastMenu(void);
 static void moveSelection(ST_VerticalMenuUi *ui, int delta, int optionQty);
 
+/**
+ * @defgroup SelectRoastMenuButtons Select roast menu button handlers
+ * @brief Navigation and selection logic for the select roast menu.
+ * 
+ * Functions: moveSelectionUpSelectRoastMenu(),
+ * moveSelectionDownSelectRoastMenu(),
+ * onSelectSelectRoastMenu(),
+ * onConfirmStartRoast(),
+ * onCancelStartRoast(),
+ * onBackFromSelectRoast().
+ */
 static void moveSelectionUpSelectRoastMenu(void);
 static void moveSelectionDownSelectRoastMenu(void);
 static void onSelectSelectRoastMenu(void);
+static void onConfirmStartRoast(void);
+static void onCancelStartRoast(void);
 static void onBackFromSelectRoast(void);
+
+/**
+ * @brief Create a confirmation popup with message and callbacks
+ * 
+ * @param message The message to display in the popup. \0 terminated string.
+ * @param onConfirm Callback function when the confirm action is selected
+ * @param onCancel Callback function when the cancel action is selected
+ */
+static void createConfirmationPopup(const char *message,
+                                    void (*onConfirm)(void),
+                                    void (*onCancel)(void));
 
 /*******************************************************************************
  * LOCAL VARIABLES
@@ -86,7 +113,7 @@ extern void scr_screensTask(void *arg)
 
 extern void scr_screensInit(void)
 {
-    display_setBtnsCallbacks(NULL, moveSelectionUpMainMenu, moveSelectionDownMainMenu, onSelectMainMenu);
+    setBtnsCallbacks(NULL, moveSelectionUpMainMenu, moveSelectionDownMainMenu, onSelectMainMenu);
 }
 
 extern void scr_onBtnPress(EN_buttons button)
@@ -121,10 +148,10 @@ static void updateChart(const ST_chartUpdateData *data)
     display_updateRoastChart(data->currTargetTemp, data->elapsedSecs, data->currentTemp);
 }
 
-static void display_setBtnsCallbacks(void (*onBtn1Pressed)(void),
-                                     void (*onBtn2Pressed)(void),
-                                     void (*onBtn3Pressed)(void),
-                                     void (*onBtn4Pressed)(void))
+static void setBtnsCallbacks(void (*onBtn1Pressed)(void),
+                             void (*onBtn2Pressed)(void),
+                             void (*onBtn3Pressed)(void),
+                             void (*onBtn4Pressed)(void))
 {
     btnsFunc.onBtn1Pressed = onBtn1Pressed;
     btnsFunc.onBtn2Pressed = onBtn2Pressed;
@@ -208,10 +235,10 @@ static void setSelectRoastMenu(void)
         sprintf(storedCharts[i].chartName, "Test Chart %ld", i + 1);
     }
 
-    display_setBtnsCallbacks(onBackFromSelectRoast,
-                             moveSelectionUpSelectRoastMenu,
-                             moveSelectionDownSelectRoastMenu,
-                             onSelectSelectRoastMenu);
+    setBtnsCallbacks(onBackFromSelectRoast,
+                     moveSelectionUpSelectRoastMenu,
+                     moveSelectionDownSelectRoastMenu,
+                     onSelectSelectRoastMenu);
 
     display_showSelectRoastMenu(storedCharts, MAX_CHARTS_TO_SHOW);
 }
@@ -243,22 +270,59 @@ static void onSelectSelectRoastMenu(void)
         ESP_LOGW(TAG, "Select roast menu UI not initialized");
         return;
     }
-    ESP_LOGI(TAG, "Selected roast menu option %d", ui->selectedIndex);
     
     ST_storedChart *selectedChart = &storedCharts[ui->selectedIndex];
     ESP_LOGI(TAG, "Starting roast with chart: %s", selectedChart->chartName);
     
-    // TODO: Navigate to roast screen with selected chart
+    // Show confirmation popup
+    char message[128];
+    snprintf(message, sizeof(message), "Start roasting with\n%s?", selectedChart->chartName);
+    createConfirmationPopup(message, onConfirmStartRoast, onCancelStartRoast);
+}
+
+static void onConfirmStartRoast(void)
+{
+    ESP_LOGI(TAG, "Roast confirmed!");
+
+    display_hideConfirmationPopup();
+    
+    ST_VerticalMenuUi *ui = display_getSelectRoastMenuUi();
+    ST_storedChart *selectedChart = &storedCharts[ui->selectedIndex];
+    
+    display_createRoastChart(selectedChart->tempProfile, (MAX_ROAST_TIME_IN_MIN / 4), NAN, NAN);
+    pid_ctrlLoopStart(selectedChart->tempProfile, (MAX_ROAST_TIME_IN_MIN / 4));
+}
+
+static void onCancelStartRoast(void)
+{
+    ESP_LOGI(TAG, "Roast cancelled");
+
+    display_hideConfirmationPopup();
+    
+    setBtnsCallbacks(onBackFromSelectRoast,
+                     moveSelectionUpSelectRoastMenu,
+                     moveSelectionDownSelectRoastMenu,
+                     onSelectSelectRoastMenu);
 }
 
 static void onBackFromSelectRoast(void)
 {
     ESP_LOGI(TAG, "Going back to main menu");
     
-    display_setBtnsCallbacks(NULL,
-                             moveSelectionUpMainMenu,
-                             moveSelectionDownMainMenu,
-                             onSelectMainMenu);
+    setBtnsCallbacks(NULL,
+                     moveSelectionUpMainMenu,
+                     moveSelectionDownMainMenu,
+                     onSelectMainMenu);
     
     display_showMainMenu();
+}
+
+static void createConfirmationPopup(const char *message,
+                                    void (*onConfirm)(void),
+                                    void (*onCancel)(void))
+{
+    setBtnsCallbacks(onCancelStartRoast, NULL, NULL, onConfirmStartRoast);
+    
+    display_createConfirmationPopup(message);
+    display_showConfirmationPopup();
 }

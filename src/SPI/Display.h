@@ -85,6 +85,19 @@ typedef struct ST_VerticalMenuUi
     int selectedIndex;
 } ST_VerticalMenuUi;
 
+typedef struct ST_PopupUi
+{
+    lv_obj_t *overlay;         // Semi-transparent background
+    lv_obj_t *container;       // White balloon container
+    lv_obj_t *messageLabel;    // Message text
+    lv_obj_t *bottomBar;       // Bottom button bar overlay
+    lv_obj_t *btnCancel;       // Left button (cancel)
+    lv_obj_t *btnConfirm;      // Right button (confirm)
+
+    lv_style_t styleContainer;
+    lv_style_t styleBottomBar;
+} ST_PopupUi;
+
 typedef struct ST_storedChart
 {
     char chartName[MAX_CHART_NAMESIZE];
@@ -192,5 +205,21 @@ extern void display_showSelectRoastMenu(ST_storedChart *charts, uint8_t chartCou
  */
 extern ST_VerticalMenuUi *display_getSelectRoastMenuUi(void);
 
+/**
+ * @brief Create a confirmation popup with message
+ * 
+ * @param message The message to display in the popup. \0 terminated string.
+ */
+extern void display_createConfirmationPopup(const char *message);
+
+/**
+ * @brief Show the confirmation popup overlay
+ */
+extern void display_showConfirmationPopup(void);
+
+/**
+ * @brief Hide the confirmation popup overlay
+ */
+extern void display_hideConfirmationPopup(void);
 
 #endif // DISPLAY_H
