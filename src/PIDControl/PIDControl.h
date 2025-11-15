@@ -12,16 +12,15 @@
 #include "esp_log.h"
 #include "driver/gpio.h"
 #include "pid_ctrl.h"
+
 #include "OSConfig.h"
 #include "TriacControl.h"
 #include "TempSens.h"
-#include "Screens.h"
+#include "Display.h"
 
 /*******************************************************************************
  * MACROS AND DEFINES
  ******************************************************************************/
-
-#define MAX_ROAST_TIME_IN_MIN       200
 
 #define US_TO_SECONDS(us)          ((us) / 1000000ULL)
 

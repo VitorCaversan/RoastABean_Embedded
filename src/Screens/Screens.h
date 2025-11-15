@@ -10,41 +10,21 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "esp_log.h"
+
 #include "OSConfig.h"
 #include "Display.h"
 #include "Buttons.h"
+#include "TempSens.h"
 
 /*******************************************************************************
  * MACROS AND DEFINES
  ******************************************************************************/
 
-typedef enum EN_screenEvents
-{
-    SCR_EVENT_NONE = 0,
-    SCR_EVENT_UPDATE,
-    SCR_EVENT_SHOW_CHART,
-    SCR_EVENT_HIDE_CHART,
-    SCR_EVENT_UPDATE_CHART,
-    
-    SCR_EVENT_QTY // Must be the last element
-} EN_screenEvents;
+#define MAX_CHARTS_TO_SHOW      3
 
 /*******************************************************************************
  * TYPEDEFS AND STRUCTURES
  ******************************************************************************/
-
-typedef struct ST_screenMsg
-{
-    EN_screenEvents event;
-    void *data;
-} ST_screenMsg;
-
-typedef struct ST_chartUpdateData
-{
-    float currTargetTemp;
-    uint32_t elapsedSecs;
-    float currentTemp;
-} ST_chartUpdateData;
 
 typedef struct ST_btnsFunc
 {

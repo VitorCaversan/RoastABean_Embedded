@@ -56,7 +56,16 @@ void app_main(void)
     spiConfig_configureSpiBus();
     display_lcdInit();
     display_uiInit();
+    
+    // Pre-create all menu screens
     display_createStartMenu();
+    
+    // Create select roast menu (labels will be updated when shown)
+    display_createSelectRoastMenu();
+    
+    // Show start menu initially
+    display_showStartMenu();
+    
     scr_screensInit();
     tempSens_init();
     btn_configButtons();

@@ -19,7 +19,6 @@
 #include "driver/ledc.h"
 
 #include "SpiConfig.h"
-#include "PIDControl.h"
 #include "Buttons.h"
 
 /*******************************************************************************
@@ -35,7 +34,11 @@
 #define LCD_V_RES_IN_PIX    240
 #endif
 
+#define MAX_ROAST_TIME_IN_MIN       200
+
 #define MAIN_MENU_OPTION_COUNT    3
+
+#define MAX_CHART_NAMESIZE    64
 
 /*******************************************************************************
  * TYPEDEFS AND STRUCTURES
@@ -53,7 +56,14 @@ typedef struct ST_RoastChartUi
     float yMax;
 } ST_RoastChartUi;
 
-typedef struct ST_StartMenuUi
+typedef struct ST_chartUpdateData
+{
+    float currTargetTemp;
+    uint32_t elapsedSecs;
+    float currentTemp;
+} ST_chartUpdateData;
+
+typedef struct ST_VerticalMenuUi
 {
     lv_obj_t *screen;
     lv_obj_t *menuContainer;
@@ -69,7 +79,13 @@ typedef struct ST_StartMenuUi
     lv_style_t styleBottomBar;
 
     int selectedIndex; // 0..2
-} ST_StartMenuUi;
+} ST_VerticalMenuUi;
+
+typedef struct ST_storedChart
+{
+    char chartName[MAX_CHART_NAMESIZE];
+    float tempProfile[MAX_ROAST_TIME_IN_MIN];
+} ST_storedChart;
 
 /*******************************************************************************
  * EXTERNAL FUNCTION DECLARATIONS
@@ -136,17 +152,40 @@ extern void display_updateRoastChart(float currTargetTemp, uint32_t elapsedSecs,
 extern void display_createStartMenu();
 
 /**
+ * @brief Show the start menu screen
+ */
+extern void display_showStartMenu(void);
+
+/**
  * @brief Apply the selection style to the start menu UI
  * 
  * @param ui Pointer to the start menu UI structure
  */
-extern void display_applySelectionStyle(ST_StartMenuUi *ui);
+extern void display_applySelectionStyle(ST_VerticalMenuUi *ui);
 
 /**
  * @brief Get pointer to the start menu UI structure
  * 
  * @return Pointer to the start menu UI structure
  */
-extern ST_StartMenuUi *display_getStartMenuUi(void);
+extern ST_VerticalMenuUi *display_getStartMenuUi(void);
+
+/**
+ * @brief Create the select roast menu UI
+ */
+extern void display_createSelectRoastMenu(void);
+
+/**
+ * @brief Show the select roast menu screen
+ */
+extern void display_showSelectRoastMenu(ST_storedChart *charts, uint8_t chartCount);
+
+/**
+ * @brief Get pointer to the select roast menu UI structure
+ * 
+ * @return Pointer to the select roast menu UI structure
+ */
+extern ST_VerticalMenuUi *display_getSelectRoastMenuUi(void);
+
 
 #endif // DISPLAY_H

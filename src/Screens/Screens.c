@@ -35,12 +35,18 @@ static void display_setBtnsCallbacks(void (*onBtn1Pressed)(void),
  * @defgroup MainMenuButtons Main menu button handlers
  * @brief Navigation and selection logic for the start menu.
  * 
- * Functions: moveSelectionUp(), moveSelectionDown(), moveSelection(), onSelectMainMenu().
+ * Functions: moveSelectionUpMainMenu(), moveSelectionDownMainMenu(), onSelectMainMenu(), setSelectRoastMenu().
  */
-static void moveSelectionUp(void);
-static void moveSelectionDown(void);
-static void moveSelection(ST_StartMenuUi *ui, int delta);
+static void moveSelectionUpMainMenu(void);
+static void moveSelectionDownMainMenu(void);
 static void onSelectMainMenu(void);
+static void setSelectRoastMenu(void);
+static void moveSelection(ST_VerticalMenuUi *ui, int delta);
+
+static void moveSelectionUpSelectRoastMenu(void);
+static void moveSelectionDownSelectRoastMenu(void);
+static void onSelectSelectRoastMenu(void);
+static void onBackFromSelectRoast(void);
 
 /*******************************************************************************
  * LOCAL VARIABLES
@@ -49,6 +55,8 @@ static void onSelectMainMenu(void);
 static const char *TAG = "SCREENS";
 
 static ST_btnsFunc btnsFunc = {0};
+
+static ST_storedChart storedCharts[MAX_CHARTS_TO_SHOW] = {0};
 
 /*******************************************************************************
  * EXTERNAL FUNCTIONS
@@ -78,7 +86,7 @@ extern void scr_screensTask(void *arg)
 
 extern void scr_screensInit(void)
 {
-    display_setBtnsCallbacks(NULL, moveSelectionUp, moveSelectionDown, onSelectMainMenu);
+    display_setBtnsCallbacks(NULL, moveSelectionUpMainMenu, moveSelectionDownMainMenu, onSelectMainMenu);
 }
 
 extern void scr_onBtnPress(EN_buttons button)
@@ -124,9 +132,9 @@ static void display_setBtnsCallbacks(void (*onBtn1Pressed)(void),
     btnsFunc.onBtn4Pressed = onBtn4Pressed;
 }
 
-static void moveSelectionUp(void)
+static void moveSelectionUpMainMenu(void)
 {
-    ST_StartMenuUi *ui = display_getStartMenuUi();
+    ST_VerticalMenuUi *ui = display_getStartMenuUi();
     if (ui == NULL || ui->screen == NULL) {
         ESP_LOGW(TAG, "Start menu UI not initialized");
         return;
@@ -134,9 +142,9 @@ static void moveSelectionUp(void)
     moveSelection(ui, -1);
 }
 
-static void moveSelectionDown(void)
+static void moveSelectionDownMainMenu(void)
 {
-    ST_StartMenuUi *ui = display_getStartMenuUi();
+    ST_VerticalMenuUi *ui = display_getStartMenuUi();
     if (ui == NULL || ui->screen == NULL) {
         ESP_LOGW(TAG, "Start menu UI not initialized");
         return;
@@ -144,7 +152,7 @@ static void moveSelectionDown(void)
     moveSelection(ui, 1);
 }
 
-static void moveSelection(ST_StartMenuUi *ui, int delta)
+static void moveSelection(ST_VerticalMenuUi *ui, int delta)
 {
     int next = ui->selectedIndex + delta;
     if (next < 0) next = (MAIN_MENU_OPTION_COUNT - 1);
@@ -158,7 +166,7 @@ static void moveSelection(ST_StartMenuUi *ui, int delta)
 
 static void onSelectMainMenu(void)
 {
-    ST_StartMenuUi *ui = display_getStartMenuUi();
+    ST_VerticalMenuUi *ui = display_getStartMenuUi();
     if (ui == NULL || ui->screen == NULL) {
         ESP_LOGW(TAG, "Start menu UI not initialized");
         return;
@@ -168,8 +176,8 @@ static void onSelectMainMenu(void)
     switch (ui->selectedIndex)
     {
         case 0: // "Roast"
-            ESP_LOGI(TAG, "Starting roast...");
-            // TODO: Navigate to roast screen or start roast process
+            ESP_LOGI(TAG, "Going to select roast...");
+            setSelectRoastMenu();
         break;
         case 1: // "Manage Roast Curves"
             ESP_LOGI(TAG, "Managing roast curves...");
@@ -183,4 +191,74 @@ static void onSelectMainMenu(void)
             ESP_LOGW(TAG, "Unknown menu option: %d", ui->selectedIndex);
         break;
     }
+}
+
+static void setSelectRoastMenu(void)
+{
+    float currTemp = tempSens_getTemperature();
+    uint32_t i = 0;
+    uint32_t j = 0;
+    for (i = 0; i < MAX_CHARTS_TO_SHOW; i++)
+    {
+        for (j = 0; j < (MAX_ROAST_TIME_IN_MIN / 4); j++)
+        {
+            storedCharts[i].tempProfile[j] = currTemp + random() % 20;
+        }
+
+        sprintf(storedCharts[i].chartName, "Test Chart %ld", i + 1);
+    }
+
+    display_setBtnsCallbacks(onBackFromSelectRoast,
+                             moveSelectionUpSelectRoastMenu,
+                             moveSelectionDownSelectRoastMenu,
+                             onSelectSelectRoastMenu);
+
+    display_showSelectRoastMenu(storedCharts, MAX_CHARTS_TO_SHOW);
+}
+
+static void moveSelectionUpSelectRoastMenu(void)
+{
+    ST_VerticalMenuUi *ui = display_getSelectRoastMenuUi();
+    if (ui == NULL || ui->screen == NULL) {
+        ESP_LOGW(TAG, "Select roast menu UI not initialized");
+        return;
+    }
+    moveSelection(ui, -1);
+}
+
+static void moveSelectionDownSelectRoastMenu(void)
+{
+    ST_VerticalMenuUi *ui = display_getSelectRoastMenuUi();
+    if (ui == NULL || ui->screen == NULL) {
+        ESP_LOGW(TAG, "Select roast menu UI not initialized");
+        return;
+    }
+    moveSelection(ui, 1);
+}
+
+static void onSelectSelectRoastMenu(void)
+{
+    ST_VerticalMenuUi *ui = display_getSelectRoastMenuUi();
+    if (ui == NULL || ui->screen == NULL) {
+        ESP_LOGW(TAG, "Select roast menu UI not initialized");
+        return;
+    }
+    ESP_LOGI(TAG, "Selected roast menu option %d", ui->selectedIndex);
+    
+    ST_storedChart *selectedChart = &storedCharts[ui->selectedIndex];
+    ESP_LOGI(TAG, "Starting roast with chart: %s", selectedChart->chartName);
+    
+    // TODO: Navigate to roast screen with selected chart
+}
+
+static void onBackFromSelectRoast(void)
+{
+    ESP_LOGI(TAG, "Going back to main menu");
+    
+    display_setBtnsCallbacks(NULL,
+                             moveSelectionUpMainMenu,
+                             moveSelectionDownMainMenu,
+                             onSelectMainMenu);
+    
+    display_showStartMenu();
 }

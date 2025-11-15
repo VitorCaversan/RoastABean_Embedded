@@ -42,7 +42,8 @@ static esp_lcd_panel_io_handle_t ioHandle = NULL;
 static esp_lcd_panel_handle_t panelHandle = NULL;
 static lv_obj_t *mainLabel = NULL;
 static ST_RoastChartUi roastChartUi = {0};
-static ST_StartMenuUi startMenuUi = {0};
+static ST_VerticalMenuUi startMenuUi = {0};
+static ST_VerticalMenuUi selectRoastMenuUi = {0};
 
 static const char *menuLabels[MAIN_MENU_OPTION_COUNT] = {
     "Roast",
@@ -522,13 +523,10 @@ extern void display_createStartMenu()
     // Initial selection
     display_applySelectionStyle(&startMenuUi);
 
-    // Load screen
-    lv_scr_load(startMenuUi.screen);
-
     lvgl_port_unlock();
 }
 
-extern void display_applySelectionStyle(ST_StartMenuUi *ui)
+extern void display_applySelectionStyle(ST_VerticalMenuUi *ui)
 {
     bool ok = lvgl_port_lock(0);
     if (!ok) {
@@ -554,9 +552,152 @@ extern void display_applySelectionStyle(ST_StartMenuUi *ui)
     lvgl_port_unlock();
 }
 
-extern ST_StartMenuUi *display_getStartMenuUi(void)
+extern void display_showStartMenu(void)
+{
+    if (startMenuUi.screen != NULL) {
+        bool ok = lvgl_port_lock(0);
+        if (!ok) { return; }
+        lv_scr_load(startMenuUi.screen);
+        lvgl_port_unlock();
+    }
+}
+
+extern ST_VerticalMenuUi *display_getStartMenuUi(void)
 {
     return &startMenuUi;
+}
+
+extern void display_createSelectRoastMenu(void)
+{
+    bool ok = lvgl_port_lock(0);
+    if (!ok)
+    {
+        ESP_LOGE(TAG, "[X] Failed to acquire LVGL lock");
+        return;
+    }
+
+    // If screen already exists, clean it up first
+    if (selectRoastMenuUi.screen != NULL)
+    {
+        lv_obj_del(selectRoastMenuUi.screen);
+        selectRoastMenuUi.screen = NULL;
+    }
+
+    selectRoastMenuUi.selectedIndex = 0;
+
+    lv_style_reset(&selectRoastMenuUi.styleItem);
+    lv_style_init(&selectRoastMenuUi.styleItem);
+    lv_style_set_bg_color(&selectRoastMenuUi.styleItem, lv_color_hex(0xB0B0B0));
+    lv_style_set_bg_opa(&selectRoastMenuUi.styleItem, LV_OPA_COVER);
+    lv_style_set_border_width(&selectRoastMenuUi.styleItem, 0);
+    lv_style_set_pad_all(&selectRoastMenuUi.styleItem, 0);
+
+    lv_style_reset(&selectRoastMenuUi.styleItemSelected);
+    lv_style_init(&selectRoastMenuUi.styleItemSelected);
+    lv_style_set_bg_opa(&selectRoastMenuUi.styleItemSelected, LV_OPA_COVER);
+    lv_style_set_bg_grad_dir(&selectRoastMenuUi.styleItemSelected, LV_GRAD_DIR_VER);
+    lv_style_set_bg_color(&selectRoastMenuUi.styleItemSelected, lv_palette_lighten(LV_PALETTE_BLUE, 1));
+    lv_style_set_bg_grad_color(&selectRoastMenuUi.styleItemSelected, lv_palette_darken(LV_PALETTE_BLUE, 1));
+    lv_style_set_border_width(&selectRoastMenuUi.styleItemSelected, 0);
+    lv_style_set_pad_all(&selectRoastMenuUi.styleItemSelected, 0);
+
+    lv_style_reset(&selectRoastMenuUi.styleBottomBar);
+    lv_style_init(&selectRoastMenuUi.styleBottomBar);
+    lv_style_set_bg_opa(&selectRoastMenuUi.styleBottomBar, LV_OPA_COVER);
+    lv_style_set_bg_color(&selectRoastMenuUi.styleBottomBar, lv_color_hex(0x202020));
+    lv_style_set_border_width(&selectRoastMenuUi.styleBottomBar, 0);
+    lv_style_set_pad_all(&selectRoastMenuUi.styleBottomBar, 6);
+
+    // Screen
+    selectRoastMenuUi.screen = lv_obj_create(NULL);
+    lv_obj_set_style_bg_color(selectRoastMenuUi.screen, lv_color_hex(0x101010), 0);
+    lv_obj_set_style_bg_opa(selectRoastMenuUi.screen, LV_OPA_COVER, 0);
+
+    // Title
+    lv_obj_t *title = lv_label_create(selectRoastMenuUi.screen);
+    lv_label_set_text(title, "Select Roast");
+    lv_obj_set_style_text_color(title, lv_color_white(), 0);
+    lv_obj_set_style_text_font(title, lv_theme_get_font_large(selectRoastMenuUi.screen), 0);
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 8);
+
+    // Menu container (center area)
+    selectRoastMenuUi.menuContainer = lv_obj_create(selectRoastMenuUi.screen);
+    lv_obj_set_size(selectRoastMenuUi.menuContainer, lv_pct(98), lv_pct(75));
+    lv_obj_align(selectRoastMenuUi.menuContainer, LV_ALIGN_TOP_MID, 0, 26);
+    lv_obj_set_flex_flow(selectRoastMenuUi.menuContainer, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(selectRoastMenuUi.menuContainer, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_bg_opa(selectRoastMenuUi.menuContainer, LV_OPA_TRANSP, 0);
+    lv_obj_clear_flag(selectRoastMenuUi.menuContainer, LV_OBJ_FLAG_SCROLLABLE);
+
+    for (int i = 0; i < MAIN_MENU_OPTION_COUNT; ++i)
+    {
+        selectRoastMenuUi.menuOptions[i] = makeMenuOption(selectRoastMenuUi.menuContainer, "Dummy");
+        lv_obj_add_style(selectRoastMenuUi.menuOptions[i], &selectRoastMenuUi.styleItem, 0);
+    }
+
+    // Bottom bar with 4 fixed buttons
+    selectRoastMenuUi.bottomBar = lv_obj_create(selectRoastMenuUi.screen);
+    lv_obj_add_style(selectRoastMenuUi.bottomBar, &selectRoastMenuUi.styleBottomBar, 0);
+    lv_obj_set_width(selectRoastMenuUi.bottomBar, lv_pct(100));
+    lv_obj_set_height(selectRoastMenuUi.bottomBar, 44);
+    lv_obj_align(selectRoastMenuUi.bottomBar, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_set_flex_flow(selectRoastMenuUi.bottomBar, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(selectRoastMenuUi.bottomBar, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    selectRoastMenuUi.btnReturn = lv_btn_create(selectRoastMenuUi.bottomBar);
+    lv_obj_set_size(selectRoastMenuUi.btnReturn, 70, 28);
+    lv_obj_t *lblRet = lv_label_create(selectRoastMenuUi.btnReturn);
+    lv_label_set_text(lblRet, LV_SYMBOL_LEFT);
+    lv_obj_center(lblRet);
+
+    selectRoastMenuUi.btnUp = lv_btn_create(selectRoastMenuUi.bottomBar);
+    lv_obj_set_size(selectRoastMenuUi.btnUp, 70, 28);
+    lv_obj_t *lblUp = lv_label_create(selectRoastMenuUi.btnUp);
+    lv_label_set_text(lblUp, LV_SYMBOL_UP);
+    lv_obj_center(lblUp);
+
+    selectRoastMenuUi.btnDown = lv_btn_create(selectRoastMenuUi.bottomBar);
+    lv_obj_set_size(selectRoastMenuUi.btnDown, 70, 28);
+    lv_obj_t *lblDown = lv_label_create(selectRoastMenuUi.btnDown);
+    lv_label_set_text(lblDown, LV_SYMBOL_DOWN);
+    lv_obj_center(lblDown);
+
+    selectRoastMenuUi.btnSelect = lv_btn_create(selectRoastMenuUi.bottomBar);
+    lv_obj_set_size(selectRoastMenuUi.btnSelect, 70, 28);
+    lv_obj_t *lblSel = lv_label_create(selectRoastMenuUi.btnSelect);
+    lv_label_set_text(lblSel, LV_SYMBOL_OK);
+    lv_obj_center(lblSel);
+
+    // Initial selection
+    display_applySelectionStyle(&selectRoastMenuUi);
+
+    lvgl_port_unlock();
+}
+
+extern void display_showSelectRoastMenu(ST_storedChart *charts, uint8_t chartCount)
+{
+    if (selectRoastMenuUi.screen != NULL) {
+        bool ok = lvgl_port_lock(0);
+        if (!ok) { return; }
+        
+        // Update menu labels with chart names
+        for (int i = 0; ((i < chartCount) && (i < MAIN_MENU_OPTION_COUNT)); ++i) {
+            if (selectRoastMenuUi.menuOptions[i] != NULL) {
+                lv_obj_t *label = lv_obj_get_child(selectRoastMenuUi.menuOptions[i], 0);
+                if (label != NULL) {
+                    lv_label_set_text(label, charts[i].chartName);
+                }
+            }
+        }
+        
+        lv_scr_load(selectRoastMenuUi.screen);
+        lvgl_port_unlock();
+    }
+}
+
+extern ST_VerticalMenuUi *display_getSelectRoastMenuUi(void)
+{
+    return &selectRoastMenuUi;
 }
 
 /*******************************************************************************
