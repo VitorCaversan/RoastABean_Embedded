@@ -41,7 +41,7 @@ static void moveSelectionUpMainMenu(void);
 static void moveSelectionDownMainMenu(void);
 static void onSelectMainMenu(void);
 static void setSelectRoastMenu(void);
-static void moveSelection(ST_VerticalMenuUi *ui, int delta);
+static void moveSelection(ST_VerticalMenuUi *ui, int delta, int optionQty);
 
 static void moveSelectionUpSelectRoastMenu(void);
 static void moveSelectionDownSelectRoastMenu(void);
@@ -134,39 +134,39 @@ static void display_setBtnsCallbacks(void (*onBtn1Pressed)(void),
 
 static void moveSelectionUpMainMenu(void)
 {
-    ST_VerticalMenuUi *ui = display_getStartMenuUi();
+    ST_VerticalMenuUi *ui = display_getMainMenuUi();
     if (ui == NULL || ui->screen == NULL) {
         ESP_LOGW(TAG, "Start menu UI not initialized");
         return;
     }
-    moveSelection(ui, -1);
+    moveSelection(ui, -1, MAIN_MENU_OPTION_COUNT);
 }
 
 static void moveSelectionDownMainMenu(void)
 {
-    ST_VerticalMenuUi *ui = display_getStartMenuUi();
+    ST_VerticalMenuUi *ui = display_getMainMenuUi();
     if (ui == NULL || ui->screen == NULL) {
         ESP_LOGW(TAG, "Start menu UI not initialized");
         return;
     }
-    moveSelection(ui, 1);
+    moveSelection(ui, 1, MAIN_MENU_OPTION_COUNT);
 }
 
-static void moveSelection(ST_VerticalMenuUi *ui, int delta)
+static void moveSelection(ST_VerticalMenuUi *ui, int delta, int optionQty)
 {
     int next = ui->selectedIndex + delta;
-    if (next < 0) next = (MAIN_MENU_OPTION_COUNT - 1);
-    if (next >= MAIN_MENU_OPTION_COUNT) next = 0;
+    if (next < 0) next = (optionQty - 1);
+    if (next >= optionQty) next = 0;
     if (next != ui->selectedIndex)
     {
         ui->selectedIndex = next;
-        display_applySelectionStyle(ui);
+        display_applySelectionStyle(ui, optionQty);
     }
 }
 
 static void onSelectMainMenu(void)
 {
-    ST_VerticalMenuUi *ui = display_getStartMenuUi();
+    ST_VerticalMenuUi *ui = display_getMainMenuUi();
     if (ui == NULL || ui->screen == NULL) {
         ESP_LOGW(TAG, "Start menu UI not initialized");
         return;
@@ -223,7 +223,7 @@ static void moveSelectionUpSelectRoastMenu(void)
         ESP_LOGW(TAG, "Select roast menu UI not initialized");
         return;
     }
-    moveSelection(ui, -1);
+    moveSelection(ui, -1, SELECT_ROAST_MENU_OPTION_COUNT);
 }
 
 static void moveSelectionDownSelectRoastMenu(void)
@@ -233,7 +233,7 @@ static void moveSelectionDownSelectRoastMenu(void)
         ESP_LOGW(TAG, "Select roast menu UI not initialized");
         return;
     }
-    moveSelection(ui, 1);
+    moveSelection(ui, 1, SELECT_ROAST_MENU_OPTION_COUNT);
 }
 
 static void onSelectSelectRoastMenu(void)
@@ -260,5 +260,5 @@ static void onBackFromSelectRoast(void)
                              moveSelectionDownMainMenu,
                              onSelectMainMenu);
     
-    display_showStartMenu();
+    display_showMainMenu();
 }

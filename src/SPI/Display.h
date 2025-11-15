@@ -36,9 +36,12 @@
 
 #define MAX_ROAST_TIME_IN_MIN       200
 
-#define MAIN_MENU_OPTION_COUNT    3
+#define MAX_VERTICAL_MENU_OPTION_COUNT    10
 
 #define MAX_CHART_NAMESIZE    64
+
+#define MAIN_MENU_OPTION_COUNT      3
+#define SELECT_ROAST_MENU_OPTION_COUNT    3
 
 /*******************************************************************************
  * TYPEDEFS AND STRUCTURES
@@ -67,7 +70,7 @@ typedef struct ST_VerticalMenuUi
 {
     lv_obj_t *screen;
     lv_obj_t *menuContainer;
-    lv_obj_t *menuOptions[MAIN_MENU_OPTION_COUNT];
+    lv_obj_t *menuOptions[MAX_VERTICAL_MENU_OPTION_COUNT];
     lv_obj_t *bottomBar;
     lv_obj_t *btnReturn;
     lv_obj_t *btnUp;
@@ -78,7 +81,8 @@ typedef struct ST_VerticalMenuUi
     lv_style_t styleItemSelected;
     lv_style_t styleBottomBar;
 
-    int selectedIndex; // 0..2
+    int optionQty;
+    int selectedIndex;
 } ST_VerticalMenuUi;
 
 typedef struct ST_storedChart
@@ -149,26 +153,27 @@ extern void display_updateRoastChart(float currTargetTemp, uint32_t elapsedSecs,
 /**
  * @brief Create the start menu UI
  */
-extern void display_createStartMenu();
+extern void display_createMainMenu();
 
 /**
  * @brief Show the start menu screen
  */
-extern void display_showStartMenu(void);
+extern void display_showMainMenu(void);
 
 /**
  * @brief Apply the selection style to the start menu UI
  * 
  * @param ui Pointer to the start menu UI structure
+ * @param optionQty Number of menu options available
  */
-extern void display_applySelectionStyle(ST_VerticalMenuUi *ui);
+extern void display_applySelectionStyle(ST_VerticalMenuUi *ui, int optionQty);
 
 /**
  * @brief Get pointer to the start menu UI structure
  * 
  * @return Pointer to the start menu UI structure
  */
-extern ST_VerticalMenuUi *display_getStartMenuUi(void);
+extern ST_VerticalMenuUi *display_getMainMenuUi(void);
 
 /**
  * @brief Create the select roast menu UI

@@ -58,13 +58,13 @@ void app_main(void)
     display_uiInit();
     
     // Pre-create all menu screens
-    display_createStartMenu();
+    display_createMainMenu();
     
     // Create select roast menu (labels will be updated when shown)
     display_createSelectRoastMenu();
     
     // Show start menu initially
-    display_showStartMenu();
+    display_showMainMenu();
     
     scr_screensInit();
     tempSens_init();
