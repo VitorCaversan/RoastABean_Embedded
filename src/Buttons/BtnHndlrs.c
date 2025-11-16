@@ -284,7 +284,7 @@ static void onSelectSelectRoastMenu(void)
     createConfirmationPopupWithHndlrs(message,
                                       onConfirmStartRoast,
                                       onCancelStartRoast,
-                                      lv_color_hex(0x101010));
+                                      lv_color_black());
 }
 
 static void onConfirmStartRoast(void)

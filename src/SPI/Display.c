@@ -20,6 +20,39 @@
 
 #define INITIAL_BCKLIGHT_DUTY_PERCENT   80.0f
 
+// UI Layout defines
+#define UI_TITLE_Y_OFFSET               6
+#define UI_TITLE_Y_OFFSET_SMALL         8
+#define UI_CHART_CENTER_Y_OFFSET        20
+#define UI_CHART_WIDTH_PCT              85
+#define UI_CHART_HEIGHT_PCT             60
+#define UI_CHART_DIV_LINES              6
+#define UI_CHART_TITLE_X_OFFSET         20
+#define UI_CHART_AXIS_LABEL_X_OFFSET    -4
+#define UI_CHART_AXIS_LABEL_Y_OFFSET    2
+#define UI_CHART_LEGEND_Y_OFFSET        -4
+#define UI_CHART_INFO_Y_OFFSET          20
+
+#define UI_POPUP_CONTAINER_WIDTH_PCT    80
+#define UI_POPUP_CONTAINER_PADDING      16
+#define UI_POPUP_CONTAINER_BORDER       2
+#define UI_POPUP_CONTAINER_RADIUS       12
+#define UI_POPUP_SHADOW_WIDTH           20
+
+#define UI_MENU_CONTAINER_WIDTH_PCT     98
+#define UI_MENU_CONTAINER_HEIGHT_PCT    70
+#define UI_MENU_CONTAINER_Y_OFFSET      26
+#define UI_MENU_OPTION_WIDTH_PCT        94
+#define UI_MENU_OPTION_HEIGHT           36
+#define UI_MENU_OPTION_RADIUS           8
+
+#define UI_BOTTOM_BAR_HEIGHT            44
+#define UI_BOTTOM_BAR_WIDTH_PADDING     6
+#define UI_BOTTOM_BAR_BOTTOM_PADDING    2
+#define UI_BOTTOM_BAR_SIDE_PADDING      12
+#define UI_BUTTON_WIDTH                 70
+#define UI_BUTTON_HEIGHT                28
+
 /*******************************************************************************
  * LOCAL FUNCTION DECLARATIONS
  ******************************************************************************/
@@ -199,11 +232,11 @@ extern void display_uiStatusBarUpdate(bool ethUp, float tempC, int pwm, bool fau
     static lv_obj_t *labelFault = NULL;
     static lv_obj_t *labelClock = NULL;
 
-    const lv_color_t okColor    = lv_color_hex(0x21C55E); // green-ish
-    const lv_color_t warnColor  = lv_color_hex(0xEAB308); // amber
-    const lv_color_t badColor   = lv_color_hex(0xEF4444); // red
+    const lv_color_t okColor    = lv_palette_main(LV_PALETTE_GREEN);
+    const lv_color_t warnColor  = lv_palette_main(LV_PALETTE_YELLOW);
+    const lv_color_t badColor   = lv_palette_main(LV_PALETTE_RED);
     const lv_color_t textColor  = lv_color_white();
-    const lv_color_t bgColor    = lv_color_hex(0x111827); // dark
+    const lv_color_t bgColor    = lv_color_black();
 
     lvgl_port_lock(0);
     if (!bar)
@@ -310,8 +343,8 @@ extern void display_createRoastChart(const float *profile, uint32_t totalMins, f
 
     // Chart
     roastChartUi.chart = lv_chart_create(roastChartUi.screen);
-    lv_obj_set_size(roastChartUi.chart, lv_pct(85), lv_pct(60));
-    lv_obj_align(roastChartUi.chart, LV_ALIGN_TOP_MID, 0, 20);
+    lv_obj_set_size(roastChartUi.chart, lv_pct(UI_CHART_WIDTH_PCT), lv_pct(UI_CHART_HEIGHT_PCT));
+    lv_obj_align(roastChartUi.chart, LV_ALIGN_TOP_MID, 0, UI_CHART_CENTER_Y_OFFSET);
     lv_chart_set_type(roastChartUi.chart, LV_CHART_TYPE_LINE);
     lv_chart_set_update_mode(roastChartUi.chart, LV_CHART_UPDATE_MODE_SHIFT); // we will address by index anyway
     lv_chart_set_point_count(roastChartUi.chart, totalMins);
@@ -319,31 +352,27 @@ extern void display_createRoastChart(const float *profile, uint32_t totalMins, f
     // Y range and tick marks
     lv_chart_set_range(roastChartUi.chart, LV_CHART_AXIS_PRIMARY_Y, toChartCoord(roastChartUi.yMin), toChartCoord(roastChartUi.yMax));
     lv_chart_set_range(roastChartUi.chart, LV_CHART_AXIS_PRIMARY_X, toChartCoord(0), toChartCoord(totalMins - 1));
-    lv_chart_set_div_line_count(roastChartUi.chart, 6, 6);
-    
-    // Padding for the chart drawing area (inside the white grid box)
-    // lv_obj_set_style_pad_left(roastChartUi.chart, 35, LV_PART_MAIN);   // room for Y labels
-    // lv_obj_set_style_pad_bottom(roastChartUi.chart, 25, LV_PART_MAIN); // room for X labels
+    lv_chart_set_div_line_count(roastChartUi.chart, UI_CHART_DIV_LINES, UI_CHART_DIV_LINES);
 
     // Axis labels (simple min/max markers)
     lv_obj_t *yMinLbl = lv_label_create(roastChartUi.screen);
     lv_label_set_text_fmt(yMinLbl, "%d", (int)roastChartUi.yMin);
     ESP_LOGI(TAG, "YMin: %.1f", roastChartUi.yMin);
-    lv_obj_align_to(yMinLbl, roastChartUi.chart, LV_ALIGN_OUT_LEFT_BOTTOM, -4, 0);
+    lv_obj_align_to(yMinLbl, roastChartUi.chart, LV_ALIGN_OUT_LEFT_BOTTOM, UI_CHART_AXIS_LABEL_X_OFFSET, 0);
 
     lv_obj_t *yMaxLbl = lv_label_create(roastChartUi.screen);
     lv_label_set_text_fmt(yMaxLbl, "%d", (int)roastChartUi.yMax);
     ESP_LOGI(TAG, "YMax: %.1f", roastChartUi.yMax);
-    lv_obj_align_to(yMaxLbl, roastChartUi.chart, LV_ALIGN_OUT_LEFT_TOP, -4, 0);
+    lv_obj_align_to(yMaxLbl, roastChartUi.chart, LV_ALIGN_OUT_LEFT_TOP, UI_CHART_AXIS_LABEL_X_OFFSET, 0);
 
     // X-axis min/max (0 min ... totalMins-1)
     lv_obj_t *xMinLbl = lv_label_create(roastChartUi.screen);
     lv_label_set_text(xMinLbl, "0min");
-    lv_obj_align_to(xMinLbl, roastChartUi.chart, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 2);
+    lv_obj_align_to(xMinLbl, roastChartUi.chart, LV_ALIGN_OUT_BOTTOM_LEFT, 0, UI_CHART_AXIS_LABEL_Y_OFFSET);
 
     lv_obj_t *xMaxLbl = lv_label_create(roastChartUi.screen);
     lv_label_set_text_fmt(xMaxLbl, "%" PRIu32 "min", (totalMins ? totalMins - 1 : 0));
-    lv_obj_align_to(xMaxLbl, roastChartUi.chart, LV_ALIGN_OUT_BOTTOM_RIGHT, 0, 2);
+    lv_obj_align_to(xMaxLbl, roastChartUi.chart, LV_ALIGN_OUT_BOTTOM_RIGHT, 0, UI_CHART_AXIS_LABEL_Y_OFFSET);
 
     // Series - use standard RGB colors
     roastChartUi.seriesTarget  = lv_chart_add_series(roastChartUi.chart, lv_palette_main(LV_PALETTE_ORANGE), LV_CHART_AXIS_PRIMARY_Y);
@@ -363,18 +392,18 @@ extern void display_createRoastChart(const float *profile, uint32_t totalMins, f
     lv_obj_t *title = lv_label_create(roastChartUi.screen);
     lv_label_set_text(title, "Roast Profile (°C)");
     lv_obj_set_style_text_font(title, lv_theme_get_font_large(roastChartUi.screen), 0);
-    lv_obj_align(title, LV_ALIGN_OUT_TOP_LEFT, 20, -1);
+    lv_obj_align(title, LV_ALIGN_OUT_TOP_LEFT, UI_CHART_TITLE_X_OFFSET, -1);
 
     // Legend labels
     lv_obj_t *legend = lv_label_create(roastChartUi.screen);
     lv_label_set_text(legend, "#FF8000 Target#  #0080FF Current#");  // RGB format
     lv_label_set_recolor(legend, true);
-    lv_obj_align_to(legend, roastChartUi.chart, LV_ALIGN_OUT_TOP_RIGHT, 0, -4);
+    lv_obj_align_to(legend, roastChartUi.chart, LV_ALIGN_OUT_TOP_RIGHT, 0, UI_CHART_LEGEND_Y_OFFSET);
 
     // Info line
     roastChartUi.labelInfo = lv_label_create(roastChartUi.screen);
     lv_label_set_text(roastChartUi.labelInfo, "Tnow: --.-°C | Ttgt: --.-°C | Left: --:--");
-    lv_obj_align_to(roastChartUi.labelInfo, roastChartUi.chart, LV_ALIGN_OUT_BOTTOM_MID, 0, 20);
+    lv_obj_align_to(roastChartUi.labelInfo, roastChartUi.chart, LV_ALIGN_OUT_BOTTOM_MID, 0, UI_CHART_INFO_Y_OFFSET);
 
     // Bottom bar with fixed buttons
     lv_style_reset(&roastChartUi.styleBottomBar);
@@ -382,19 +411,19 @@ extern void display_createRoastChart(const float *profile, uint32_t totalMins, f
     lv_style_set_bg_opa(&roastChartUi.styleBottomBar, LV_OPA_0);
     lv_style_set_bg_color(&roastChartUi.styleBottomBar, lv_palette_main(LV_PALETTE_NONE));
     lv_style_set_border_width(&roastChartUi.styleBottomBar, 0);
-    lv_style_set_pad_hor(&roastChartUi.styleBottomBar, 6);
-    lv_style_set_pad_bottom(&roastChartUi.styleBottomBar, 2);
+    lv_style_set_pad_hor(&roastChartUi.styleBottomBar, UI_BOTTOM_BAR_WIDTH_PADDING);
+    lv_style_set_pad_bottom(&roastChartUi.styleBottomBar, UI_BOTTOM_BAR_BOTTOM_PADDING);
 
     roastChartUi.bottomBar = lv_obj_create(roastChartUi.screen);
     lv_obj_add_style(roastChartUi.bottomBar, &roastChartUi.styleBottomBar, 0);
     lv_obj_set_width(roastChartUi.bottomBar, lv_pct(100));
-    lv_obj_set_height(roastChartUi.bottomBar, 44);
+    lv_obj_set_height(roastChartUi.bottomBar, UI_BOTTOM_BAR_HEIGHT);
     lv_obj_align(roastChartUi.bottomBar, LV_ALIGN_BOTTOM_MID, 0, 0);
     lv_obj_set_flex_flow(roastChartUi.bottomBar, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(roastChartUi.bottomBar, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     roastChartUi.btnReturn = lv_btn_create(roastChartUi.bottomBar);
-    lv_obj_set_size(roastChartUi.btnReturn, 70, 28);
+    lv_obj_set_size(roastChartUi.btnReturn, UI_BUTTON_WIDTH, UI_BUTTON_HEIGHT);
     lv_obj_t *lblRet = lv_label_create(roastChartUi.btnReturn);
     lv_label_set_text(lblRet, LV_SYMBOL_CLOSE);
     lv_obj_center(lblRet);
@@ -567,16 +596,16 @@ extern void display_createConfirmationPopup(const char *message, lv_color_t curr
     lv_style_init(&confirmationPopupUi.styleContainer);
     lv_style_set_bg_color(&confirmationPopupUi.styleContainer, lv_color_white());
     lv_style_set_bg_opa(&confirmationPopupUi.styleContainer, LV_OPA_COVER);
-    lv_style_set_border_width(&confirmationPopupUi.styleContainer, 2);
-    lv_style_set_border_color(&confirmationPopupUi.styleContainer, lv_color_hex(0x404040));
-    lv_style_set_radius(&confirmationPopupUi.styleContainer, 12);
-    lv_style_set_pad_all(&confirmationPopupUi.styleContainer, 16);
-    lv_style_set_shadow_width(&confirmationPopupUi.styleContainer, 20);
+    lv_style_set_border_width(&confirmationPopupUi.styleContainer, UI_POPUP_CONTAINER_BORDER);
+    lv_style_set_border_color(&confirmationPopupUi.styleContainer, lv_palette_main(LV_PALETTE_GREY));
+    lv_style_set_radius(&confirmationPopupUi.styleContainer, UI_POPUP_CONTAINER_RADIUS);
+    lv_style_set_pad_all(&confirmationPopupUi.styleContainer, UI_POPUP_CONTAINER_PADDING);
+    lv_style_set_shadow_width(&confirmationPopupUi.styleContainer, UI_POPUP_SHADOW_WIDTH);
     lv_style_set_shadow_opa(&confirmationPopupUi.styleContainer, LV_OPA_30);
 
     confirmationPopupUi.container = lv_obj_create(confirmationPopupUi.overlay);
     lv_obj_add_style(confirmationPopupUi.container, &confirmationPopupUi.styleContainer, 0);
-    lv_obj_set_size(confirmationPopupUi.container, lv_pct(80), LV_SIZE_CONTENT);
+    lv_obj_set_size(confirmationPopupUi.container, lv_pct(UI_POPUP_CONTAINER_WIDTH_PCT), LV_SIZE_CONTENT);
     lv_obj_center(confirmationPopupUi.container);
     lv_obj_set_flex_flow(confirmationPopupUi.container, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(confirmationPopupUi.container, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
@@ -596,27 +625,27 @@ extern void display_createConfirmationPopup(const char *message, lv_color_t curr
     lv_style_set_bg_opa(&confirmationPopupUi.styleBottomBar, LV_OPA_COVER);
     lv_style_set_bg_color(&confirmationPopupUi.styleBottomBar, currScrBckgnd);
     lv_style_set_border_width(&confirmationPopupUi.styleBottomBar, 0);
-    lv_style_set_pad_hor(&confirmationPopupUi.styleBottomBar, 6);
-    lv_style_set_pad_bottom(&confirmationPopupUi.styleBottomBar, 2);
+    lv_style_set_pad_hor(&confirmationPopupUi.styleBottomBar, UI_BOTTOM_BAR_WIDTH_PADDING);
+    lv_style_set_pad_bottom(&confirmationPopupUi.styleBottomBar, UI_BOTTOM_BAR_BOTTOM_PADDING);
 
     confirmationPopupUi.bottomBar = lv_obj_create(confirmationPopupUi.overlay);
     lv_obj_add_style(confirmationPopupUi.bottomBar, &confirmationPopupUi.styleBottomBar, 0);
     lv_obj_set_width(confirmationPopupUi.bottomBar, lv_pct(100));
-    lv_obj_set_height(confirmationPopupUi.bottomBar, 44);
+    lv_obj_set_height(confirmationPopupUi.bottomBar, UI_BOTTOM_BAR_HEIGHT);
     lv_obj_align(confirmationPopupUi.bottomBar, LV_ALIGN_BOTTOM_MID, 0, 0);
     lv_obj_set_flex_flow(confirmationPopupUi.bottomBar, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(confirmationPopupUi.bottomBar, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     // Cancel button (left)
     confirmationPopupUi.btnCancel = lv_btn_create(confirmationPopupUi.bottomBar);
-    lv_obj_set_size(confirmationPopupUi.btnCancel, 70, 28);
+    lv_obj_set_size(confirmationPopupUi.btnCancel, UI_BUTTON_WIDTH, UI_BUTTON_HEIGHT);
     lv_obj_t *lblCancel = lv_label_create(confirmationPopupUi.btnCancel);
     lv_label_set_text(lblCancel, LV_SYMBOL_CLOSE);
     lv_obj_center(lblCancel);
 
     // Confirm button (right)
     confirmationPopupUi.btnConfirm = lv_btn_create(confirmationPopupUi.bottomBar);
-    lv_obj_set_size(confirmationPopupUi.btnConfirm, 70, 28);
+    lv_obj_set_size(confirmationPopupUi.btnConfirm, UI_BUTTON_WIDTH, UI_BUTTON_HEIGHT);
     lv_obj_t *lblConfirm = lv_label_create(confirmationPopupUi.btnConfirm);
     lv_label_set_text(lblConfirm, LV_SYMBOL_OK);
     lv_obj_center(lblConfirm);
@@ -686,9 +715,9 @@ static const char *formatTime(uint32_t totalSecs, char *buf, size_t bufSize)
 static lv_obj_t *makeMenuOption(lv_obj_t *parent, const char *text)
 {
     lv_obj_t *btn = lv_btn_create(parent);
-    lv_obj_set_width(btn, lv_pct(94));
-    lv_obj_set_height(btn, 36);
-    lv_obj_set_style_radius(btn, 8, 0);
+    lv_obj_set_width(btn, lv_pct(UI_MENU_OPTION_WIDTH_PCT));
+    lv_obj_set_height(btn, UI_MENU_OPTION_HEIGHT);
+    lv_obj_set_style_radius(btn, UI_MENU_OPTION_RADIUS, 0);
     lv_obj_clear_flag(btn, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t *label = lv_label_create(btn);
@@ -719,7 +748,7 @@ static void createVerticalMenuUi(ST_VerticalMenuUi *vertMenuUi, const char *menu
 
     lv_style_reset(&vertMenuUi->styleItem);
     lv_style_init(&vertMenuUi->styleItem);
-    lv_style_set_bg_color(&vertMenuUi->styleItem, lv_color_hex(0xB0B0B0));
+    lv_style_set_bg_color(&vertMenuUi->styleItem, lv_palette_lighten(LV_PALETTE_GREY, 2));
     lv_style_set_bg_opa(&vertMenuUi->styleItem, LV_OPA_COVER);
     lv_style_set_border_width(&vertMenuUi->styleItem, 0);
     lv_style_set_pad_all(&vertMenuUi->styleItem, 0);
@@ -733,17 +762,9 @@ static void createVerticalMenuUi(ST_VerticalMenuUi *vertMenuUi, const char *menu
     lv_style_set_border_width(&vertMenuUi->styleItemSelected, 0);
     lv_style_set_pad_all(&vertMenuUi->styleItemSelected, 0);
 
-    lv_style_reset(&vertMenuUi->styleBottomBar);
-    lv_style_init(&vertMenuUi->styleBottomBar);
-    lv_style_set_bg_opa(&vertMenuUi->styleBottomBar, LV_OPA_0);
-    lv_style_set_bg_color(&vertMenuUi->styleBottomBar, lv_palette_main(LV_PALETTE_NONE));
-    lv_style_set_border_width(&vertMenuUi->styleBottomBar, 0);
-    lv_style_set_pad_hor(&vertMenuUi->styleBottomBar, 6);
-    lv_style_set_pad_bottom(&vertMenuUi->styleBottomBar, 2);
-
     // Screen
     vertMenuUi->screen = lv_obj_create(NULL);
-    lv_obj_set_style_bg_color(vertMenuUi->screen, lv_color_hex(0x101010), 0);
+    lv_obj_set_style_bg_color(vertMenuUi->screen, lv_color_black(), 0);
     lv_obj_set_style_bg_opa(vertMenuUi->screen, LV_OPA_COVER, 0);
 
     // Title
@@ -751,12 +772,12 @@ static void createVerticalMenuUi(ST_VerticalMenuUi *vertMenuUi, const char *menu
     lv_label_set_text(title, menuTitle);
     lv_obj_set_style_text_color(title, lv_color_white(), 0);
     lv_obj_set_style_text_font(title, lv_theme_get_font_large(vertMenuUi->screen), 0);
-    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 8);
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, UI_TITLE_Y_OFFSET_SMALL);
 
     // Menu container (center area)
     vertMenuUi->menuContainer = lv_obj_create(vertMenuUi->screen);
-    lv_obj_set_size(vertMenuUi->menuContainer, lv_pct(98), lv_pct(70));
-    lv_obj_align(vertMenuUi->menuContainer, LV_ALIGN_TOP_MID, 0, 26);
+    lv_obj_set_size(vertMenuUi->menuContainer, lv_pct(UI_MENU_CONTAINER_WIDTH_PCT), lv_pct(UI_MENU_CONTAINER_HEIGHT_PCT));
+    lv_obj_align(vertMenuUi->menuContainer, LV_ALIGN_TOP_MID, 0, UI_MENU_CONTAINER_Y_OFFSET);
     lv_obj_set_flex_flow(vertMenuUi->menuContainer, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(vertMenuUi->menuContainer, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_bg_opa(vertMenuUi->menuContainer, LV_OPA_TRANSP, 0);
@@ -770,34 +791,42 @@ static void createVerticalMenuUi(ST_VerticalMenuUi *vertMenuUi, const char *menu
     }
 
     // Bottom bar with 4 fixed buttons
+    lv_style_reset(&vertMenuUi->styleBottomBar);
+    lv_style_init(&vertMenuUi->styleBottomBar);
+    lv_style_set_bg_opa(&vertMenuUi->styleBottomBar, LV_OPA_0);
+    lv_style_set_bg_color(&vertMenuUi->styleBottomBar, lv_palette_main(LV_PALETTE_NONE));
+    lv_style_set_border_width(&vertMenuUi->styleBottomBar, 0);
+    lv_style_set_pad_hor(&vertMenuUi->styleBottomBar, UI_BOTTOM_BAR_WIDTH_PADDING);
+    lv_style_set_pad_bottom(&vertMenuUi->styleBottomBar, 2);
+
     vertMenuUi->bottomBar = lv_obj_create(vertMenuUi->screen);
     lv_obj_add_style(vertMenuUi->bottomBar, &vertMenuUi->styleBottomBar, 0);
     lv_obj_set_width(vertMenuUi->bottomBar, lv_pct(100));
-    lv_obj_set_height(vertMenuUi->bottomBar, 44);
+    lv_obj_set_height(vertMenuUi->bottomBar, UI_BOTTOM_BAR_HEIGHT);
     lv_obj_align(vertMenuUi->bottomBar, LV_ALIGN_BOTTOM_MID, 0, 0);
     lv_obj_set_flex_flow(vertMenuUi->bottomBar, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(vertMenuUi->bottomBar, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     vertMenuUi->btnReturn = lv_btn_create(vertMenuUi->bottomBar);
-    lv_obj_set_size(vertMenuUi->btnReturn, 70, 28);
+    lv_obj_set_size(vertMenuUi->btnReturn, UI_BUTTON_WIDTH, UI_BUTTON_HEIGHT);
     lv_obj_t *lblRet = lv_label_create(vertMenuUi->btnReturn);
     lv_label_set_text(lblRet, LV_SYMBOL_LEFT);
     lv_obj_center(lblRet);
 
     vertMenuUi->btnUp = lv_btn_create(vertMenuUi->bottomBar);
-    lv_obj_set_size(vertMenuUi->btnUp, 70, 28);
+    lv_obj_set_size(vertMenuUi->btnUp, UI_BUTTON_WIDTH, UI_BUTTON_HEIGHT);
     lv_obj_t *lblUp = lv_label_create(vertMenuUi->btnUp);
     lv_label_set_text(lblUp, LV_SYMBOL_UP);
     lv_obj_center(lblUp);
 
     vertMenuUi->btnDown = lv_btn_create(vertMenuUi->bottomBar);
-    lv_obj_set_size(vertMenuUi->btnDown, 70, 28);
+    lv_obj_set_size(vertMenuUi->btnDown, UI_BUTTON_WIDTH, UI_BUTTON_HEIGHT);
     lv_obj_t *lblDown = lv_label_create(vertMenuUi->btnDown);
     lv_label_set_text(lblDown, LV_SYMBOL_DOWN);
     lv_obj_center(lblDown);
 
     vertMenuUi->btnSelect = lv_btn_create(vertMenuUi->bottomBar);
-    lv_obj_set_size(vertMenuUi->btnSelect, 70, 28);
+    lv_obj_set_size(vertMenuUi->btnSelect, UI_BUTTON_WIDTH, UI_BUTTON_HEIGHT);
     lv_obj_t *lblSel = lv_label_create(vertMenuUi->btnSelect);
     lv_label_set_text(lblSel, LV_SYMBOL_OK);
     lv_obj_center(lblSel);
