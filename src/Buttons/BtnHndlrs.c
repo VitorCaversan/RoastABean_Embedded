@@ -232,12 +232,56 @@ static void setSelectRoastMenu(void)
     uint32_t j = 0;
     for (i = 0; i < MAX_CHARTS_TO_SHOW; i++)
     {
-        for (j = 0; j < (MAX_ROAST_TIME_IN_MIN / 4); j++)
+        if (i == 0)
         {
-            storedCharts[i].tempProfile[j] = currTemp + random() % 20;
-        }
+            // Realistic roast profile for Test Chart 1
+            // Medium roast: 14 minutes total (MAX_ROAST_TIME_IN_MIN / 4 = 15 points)
+            // Typical coffee roasting temperatures:
+            // - Start: ~180°C (after preheat)
+            // - Yellowing phase: 160-180°C (minutes 0-3)
+            // - First crack: ~196°C (around minute 8-9)
+            // - Development: 196-210°C (minutes 9-12)
+            // - Second crack: ~210-220°C (minute 13+)
+            // - End: ~215°C for medium roast
+            
+            float profile[] = {
+                180.0f,  // 0 min - Starting temperature after preheat
+                175.0f,  // 1 min - Initial drying phase
+                170.0f,  // 2 min - Continued drying
+                168.0f,  // 3 min - End of drying phase
+                175.0f,  // 4 min - Maillard reaction begins
+                182.0f,  // 5 min - Browning accelerates
+                188.0f,  // 6 min - Pre-first crack
+                194.0f,  // 7 min - Approaching first crack
+                198.0f,  // 8 min - First crack begins (~196°C)
+                202.0f,  // 9 min - First crack ongoing
+                206.0f,  // 10 min - Development phase
+                210.0f,  // 11 min - Continued development
+                213.0f,  // 12 min - Late development
+                215.0f,  // 13 min - End of roast (medium)
+                215.0f   // 14 min - Hold temperature
+            };
+            
+            for (j = 0; j < (sizeof(profile) / sizeof(profile[0])); j++)
+            {
+                storedCharts[i].tempProfile[j] = profile[j];
+            }
 
-        sprintf(storedCharts[i].chartName, "Test Chart %ld", i + 1);
+            storedCharts[i].totalMins = j;
+
+            sprintf(storedCharts[i].chartName, "Medium Roast");
+        }
+        else
+        {
+            for (j = 0; j < (MAX_ROAST_TIME_IN_MIN / 4); j++)
+            {
+                storedCharts[i].tempProfile[j] = currTemp + random() % 20;
+            }
+
+            storedCharts[i].totalMins = j;
+            
+            sprintf(storedCharts[i].chartName, "Test Chart %ld", i + 1);
+        }
     }
 
     setBtnsCallbacks(onBackFromSelectRoast,
@@ -298,9 +342,9 @@ static void onConfirmStartRoast(void)
     ST_VerticalMenuUi *ui = display_getSelectRoastMenuUi();
     ST_storedChart *selectedChart = &storedCharts[ui->selectedIndex];
     
-    display_createRoastChart(selectedChart->tempProfile, (MAX_ROAST_TIME_IN_MIN / 4), NAN, NAN);
+    display_createRoastChart(selectedChart->tempProfile, selectedChart->totalMins, NAN, NAN);
     display_showRoastChart();
-    pid_ctrlLoopStart(selectedChart->tempProfile, (MAX_ROAST_TIME_IN_MIN / 4));
+    pid_ctrlLoopStart(selectedChart->tempProfile, selectedChart->totalMins);
 }
 
 static void onCancelStartRoast(void)

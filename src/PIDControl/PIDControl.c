@@ -84,7 +84,7 @@ extern void pid_PIDInit(void)
     ESP_ERROR_CHECK(pid_new_control_block(&pid_config, &pidRoastCtrlBlock.pidCtrl));
 }
 
-extern void pid_ctrlLoopStart(float *tempProfile, unsigned long minsToControl)
+extern void pid_ctrlLoopStart(float *tempProfile, uint32_t minsToControl)
 {
     pidRoastCtrlBlock.startingProcessUs = esp_timer_get_time();
     pidRoastCtrlBlock.minsToControl = minsToControl;

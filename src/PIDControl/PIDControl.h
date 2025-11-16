@@ -51,7 +51,7 @@ extern void pid_PIDInit(void);
  * @param tempProfile Array with the target temperature profile in °C/min
  * @param minsToControl Duration to control the roasting process in minutes
  */
-extern void pid_ctrlLoopStart(float *tempProfile, unsigned long minsToControl);
+extern void pid_ctrlLoopStart(float *tempProfile, uint32_t minsToControl);
 /**
  * @brief Stop the PID control loop
  */
