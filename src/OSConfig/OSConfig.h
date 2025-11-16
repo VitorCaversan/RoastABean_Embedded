@@ -33,7 +33,7 @@ typedef struct ST_screenMsg
 } ST_screenMsg;
 
 extern QueueHandle_t OS_mainTaskQueue;
-extern QueueHandle_t OS_screensTaskQueue;
+extern QueueHandle_t OS_btnHndlrsTaskQueue;
 
 /*******************************************************************************
  * EXTERNAL FUNCTION DECLARATIONS

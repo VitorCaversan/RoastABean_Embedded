@@ -1,7 +1,7 @@
 /*******************************************************************************
  * INCLUDES
  ******************************************************************************/
-#include "Screens.h"
+#include "BtnHndlrs.h"
 
 /*******************************************************************************
  * MACROS AND DEFINES
@@ -79,7 +79,7 @@ static void createConfirmationPopup(const char *message,
  * LOCAL VARIABLES
  ******************************************************************************/
 
-static const char *TAG = "SCREENS";
+static const char *TAG = "BTN_HNDLRS";
 
 static ST_btnsFunc btnsFunc = {0};
 
@@ -89,13 +89,13 @@ static ST_storedChart storedCharts[MAX_CHARTS_TO_SHOW] = {0};
  * EXTERNAL FUNCTIONS
  ******************************************************************************/
 
-extern void scr_screensTask(void *arg)
+extern void btnHndlrs_btnHndlrsTask(void *arg)
 {
     ST_screenMsg msg;
 
     while (1)
     {
-        if (xQueueReceive(OS_screensTaskQueue, &msg, portMAX_DELAY) == pdTRUE)
+        if (xQueueReceive(OS_btnHndlrsTaskQueue, &msg, portMAX_DELAY) == pdTRUE)
         {
             switch (msg.event)
             {
@@ -111,12 +111,12 @@ extern void scr_screensTask(void *arg)
     }
 }
 
-extern void scr_screensInit(void)
+extern void btnHndlrs_btnHndlrsInit(void)
 {
     setBtnsCallbacks(NULL, moveSelectionUpMainMenu, moveSelectionDownMainMenu, onSelectMainMenu);
 }
 
-extern void scr_onBtnPress(EN_buttons button)
+extern void btnHndlrs_onBtnPress(EN_buttons button)
 {
     switch (button)
     {

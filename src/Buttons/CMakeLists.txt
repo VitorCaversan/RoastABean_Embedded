@@ -1,3 +1,3 @@
-idf_component_register(SRCS "Buttons.c"
+idf_component_register(SRCS "BtnHndlrs.c" "Buttons.c"
                        INCLUDE_DIRS "."
-                       REQUIRES "OSConfig" "driver" "esp_timer")
+                       REQUIRES "OSConfig" "driver" "esp_timer" "SPI" "PIDControl")

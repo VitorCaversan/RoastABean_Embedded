@@ -40,20 +40,20 @@ typedef struct ST_btnsFunc
  ******************************************************************************/
 
 /**
- * @brief Task to handle screens
+ * @brief Task to handle btnHndlrs
  */
-extern void scr_screensTask(void *arg);
+extern void btnHndlrs_btnHndlrsTask(void *arg);
 
 /**
- * @brief Initialize the screens module by setting up button callbacks
+ * @brief Initialize the btnHndlrs module by setting up button callbacks
  */
-extern void scr_screensInit(void);
+extern void btnHndlrs_btnHndlrsInit(void);
 
 /**
  * @brief Calls respective button press handler based on button pressed
  * 
  * @param button The button that was pressed
  */
-extern void scr_onBtnPress(EN_buttons button);
+extern void btnHndlrs_onBtnPress(EN_buttons button);
 
 #endif // SCREENS_H

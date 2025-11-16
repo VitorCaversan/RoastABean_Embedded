@@ -17,7 +17,7 @@
 #include "TriacControl.h"
 #include "OSConfig.h"
 #include "PIDControl.h"
-#include "Screens.h"
+#include "BtnHndlrs.h"
 
 /*******************************************************************************
  * MACROS AND DEFINES
@@ -38,7 +38,7 @@ static void mainTask(void *arg);
  ******************************************************************************/
 
 QueueHandle_t OS_mainTaskQueue = NULL;
-QueueHandle_t OS_screensTaskQueue = NULL;
+QueueHandle_t OS_btnHndlrsTaskQueue = NULL;
 
 static const char *TAG = "MAIN";
 
@@ -50,14 +50,14 @@ void app_main(void)
 {
     OS_mainTaskQueue = xQueueCreate(32, sizeof(EN_buttons));
     configASSERT(OS_mainTaskQueue != NULL);
-    OS_screensTaskQueue = xQueueCreate(32, sizeof(ST_screenMsg));
-    configASSERT(OS_screensTaskQueue != NULL);
+    OS_btnHndlrsTaskQueue = xQueueCreate(32, sizeof(ST_screenMsg));
+    configASSERT(OS_btnHndlrsTaskQueue != NULL);
 
     spiConfig_configureSpiBus();
     display_lcdInit();
     display_uiInit();
     
-    // Pre-create all menu screens
+    // Pre-create all menu btnHndlrs
     display_createMainMenu();
     
     // Create select roast menu (labels will be updated when shown)
@@ -66,7 +66,7 @@ void app_main(void)
     // Show start menu initially
     display_showMainMenu();
     
-    scr_screensInit();
+    btnHndlrs_btnHndlrsInit();
     tempSens_init();
     btn_configButtons();
     triac_triacInit();
@@ -74,7 +74,7 @@ void app_main(void)
     DCMotor_initDcMotors();
 
     xTaskCreatePinnedToCore(mainTask, "mainTask", 4096, NULL, configMAX_PRIORITIES - 2, NULL, 1);
-    xTaskCreatePinnedToCore(scr_screensTask, "screensTask", 8192, NULL, configMAX_PRIORITIES - 3, NULL, 1);
+    xTaskCreatePinnedToCore(btnHndlrs_btnHndlrsTask, "btnHndlrsTask", 8192, NULL, configMAX_PRIORITIES - 3, NULL, 1);
 }
 
 static void mainTask(void *arg)
@@ -97,19 +97,19 @@ static void mainTask(void *arg)
             {
                 case BTN_1_PRESSED:
                     ESP_LOGI(TAG, "Button 1 pressed");
-                    scr_onBtnPress(BTN_1_PRESSED);
+                    btnHndlrs_onBtnPress(BTN_1_PRESSED);
                 break;
                 case BTN_2_PRESSED:
                     ESP_LOGI(TAG, "Button 2 pressed");
-                    scr_onBtnPress(BTN_2_PRESSED);
+                    btnHndlrs_onBtnPress(BTN_2_PRESSED);
                 break;
                 case BTN_3_PRESSED:
                     ESP_LOGI(TAG, "Button 3 pressed");
-                    scr_onBtnPress(BTN_3_PRESSED);
+                    btnHndlrs_onBtnPress(BTN_3_PRESSED);
                 break;
                 case BTN_4_PRESSED:
                     ESP_LOGI(TAG, "Button 4 pressed");
-                    scr_onBtnPress(BTN_4_PRESSED);
+                    btnHndlrs_onBtnPress(BTN_4_PRESSED);
                 break;
                 default:
                     ESP_LOGW(TAG, "Unknown button press: %d", msg);

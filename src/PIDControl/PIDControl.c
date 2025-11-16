@@ -148,7 +148,7 @@ static void pidLoopCallback(void *args)
     };
 
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    xQueueSendFromISR(OS_screensTaskQueue, &screenMsg, &xHigherPriorityTaskWoken);
+    xQueueSendFromISR(OS_btnHndlrsTaskQueue, &screenMsg, &xHigherPriorityTaskWoken);
     
     if (xHigherPriorityTaskWoken)
     {
