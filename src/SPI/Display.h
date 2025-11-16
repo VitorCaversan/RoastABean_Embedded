@@ -159,6 +159,11 @@ extern void display_uiStatusBarUpdate(bool ethUp, float tempC, int pwm, bool fau
 extern void display_createRoastChart(const float *profile, uint32_t totalMins, float yMin, float yMax);
 
 /**
+ * @brief Show the Roast Chart screen
+ */
+extern void display_showRoastChart(void);
+
+/**
  * @brief Update the current temperature point at the corresponding second
  * and refresh the info label.
  *

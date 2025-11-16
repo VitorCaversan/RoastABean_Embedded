@@ -329,11 +329,75 @@ extern void display_createRoastChart(const float *profile, uint32_t totalMins, f
 
     roastChartUi.totalMins = totalMins;
 
-    if (!(isfinite(yMin) && isfinite(yMax) && yMax > yMin)) {
-        computeYRangeFromProfile(profile, totalMins, &roastChartUi.yMin, &roastChartUi.yMax);
-    } else {
+    if (isfinite(yMin) && isfinite(yMax) && (yMax > yMin))
+    {
         roastChartUi.yMin = yMin;
         roastChartUi.yMax = yMax;
+    }
+    else
+    {
+        computeYRangeFromProfile(profile, totalMins, &roastChartUi.yMin, &roastChartUi.yMax);
+    }
+
+    // If chart already exists, just update the data
+    if (roastChartUi.screen != NULL && roastChartUi.chart != NULL)
+    {
+        // Update chart point count if needed
+        lv_chart_set_point_count(roastChartUi.chart, totalMins);
+        
+        // Update Y and X ranges
+        lv_chart_set_range(roastChartUi.chart, LV_CHART_AXIS_PRIMARY_Y, toChartCoord(roastChartUi.yMin), toChartCoord(roastChartUi.yMax));
+        lv_chart_set_range(roastChartUi.chart, LV_CHART_AXIS_PRIMARY_X, toChartCoord(0), toChartCoord(totalMins - 1));
+        
+        // Update target profile data
+        for (uint32_t m = 0; m < totalMins; ++m)
+        {
+            float v = isfinite(profile[m]) ? profile[m] : NAN;
+            lv_chart_set_value_by_id(roastChartUi.chart, roastChartUi.seriesTarget, m, isfinite(v) ? toChartCoord(v) : LV_CHART_POINT_NONE);
+        }
+        
+        // Reset current series
+        for (uint32_t m = 0; m < totalMins; ++m)
+        {
+            lv_chart_set_value_by_id(roastChartUi.chart, roastChartUi.seriesCurrent, m, LV_CHART_POINT_NONE);
+        }
+        
+        // Search for labels and update them
+        uint32_t child_count = lv_obj_get_child_cnt(roastChartUi.screen);
+        for (uint32_t i = 0; i < child_count; i++)
+        {
+            lv_obj_t *child = lv_obj_get_child(roastChartUi.screen, i);
+            if (lv_obj_check_type(child, &lv_label_class))
+            {
+                const char *text = lv_label_get_text(child);
+                // Check if it's an axis label by looking at alignment
+                lv_align_t align = lv_obj_get_style_align(child, LV_PART_MAIN);
+                if (align == LV_ALIGN_OUT_LEFT_BOTTOM)
+                {
+                    lv_label_set_text_fmt(child, "%d", (int)roastChartUi.yMin);
+                }
+                else if (align == LV_ALIGN_OUT_LEFT_TOP)
+                {
+                    lv_label_set_text_fmt(child, "%d", (int)roastChartUi.yMax);
+                }
+                else if (text && strstr(text, "min") != NULL && strstr(text, "0") != NULL)
+                {
+                    lv_label_set_text(child, "0min");
+                }
+                else if (text && strstr(text, "min") != NULL)
+                {
+                    lv_label_set_text_fmt(child, "%" PRIu32 "min", (totalMins ? totalMins - 1 : 0));
+                }
+            }
+        }
+        
+        // Reset info label
+        lv_label_set_text(roastChartUi.labelInfo, "Tnow: --.-°C | Ttgt: --.-°C | Left: --:--");
+        
+        lv_obj_invalidate(roastChartUi.chart);
+
+        lvgl_port_unlock();
+        return;
     }
 
     // Screen
@@ -428,10 +492,18 @@ extern void display_createRoastChart(const float *profile, uint32_t totalMins, f
     lv_label_set_text(lblRet, LV_SYMBOL_CLOSE);
     lv_obj_center(lblRet);
 
-    // Load the screen (optional: or attach to existing)
-    lv_scr_load(roastChartUi.screen);
-
     lvgl_port_unlock();
+}
+
+extern void display_showRoastChart(void)
+{
+    if (roastChartUi.screen != NULL)
+    {
+        bool ok = lvgl_port_lock(0);
+        if (!ok) { return; }
+        lv_scr_load(roastChartUi.screen);
+        lvgl_port_unlock();
+    }
 }
 
 extern void display_updateRoastChart(float currTargetTemp, uint32_t elapsedSecs, float currentTemp)

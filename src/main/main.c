@@ -125,6 +125,7 @@ static void mainTask(void *arg)
                 }
 
                 display_createRoastChart(tempProfile, (MAX_ROAST_TIME_IN_MIN / 4), NAN, NAN);
+                display_showRoastChart();
                 pid_ctrlLoopStart(tempProfile, (MAX_ROAST_TIME_IN_MIN / 4));
                 free(tempProfile);
                 break;

@@ -299,6 +299,7 @@ static void onConfirmStartRoast(void)
     ST_storedChart *selectedChart = &storedCharts[ui->selectedIndex];
     
     display_createRoastChart(selectedChart->tempProfile, (MAX_ROAST_TIME_IN_MIN / 4), NAN, NAN);
+    display_showRoastChart();
     pid_ctrlLoopStart(selectedChart->tempProfile, (MAX_ROAST_TIME_IN_MIN / 4));
 }
 
