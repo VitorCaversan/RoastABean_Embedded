@@ -106,6 +106,7 @@ extern void pid_ctrlLoopStart(float *tempProfile, unsigned long minsToControl)
 extern void pid_ctrlLoopStop(void)
 {
     ESP_LOGI(TAG, "Stop PID control loop");
+    esp_timer_stop(pidLoopTimer);
     esp_timer_delete(pidLoopTimer);
     pidLoopTimer = NULL;
 }

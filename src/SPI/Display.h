@@ -57,6 +57,11 @@ typedef struct ST_RoastChartUi
     uint32_t totalMins;
     float yMin;
     float yMax;
+
+    lv_obj_t *bottomBar;
+    lv_obj_t *btnReturn;
+
+    lv_style_t styleBottomBar;
 } ST_RoastChartUi;
 
 typedef struct ST_chartUpdateData
@@ -210,7 +215,7 @@ extern ST_VerticalMenuUi *display_getSelectRoastMenuUi(void);
  * 
  * @param message The message to display in the popup. \0 terminated string.
  */
-extern void display_createConfirmationPopup(const char *message);
+extern void display_createConfirmationPopup(const char *message, lv_color_t currScrBckgnd);
 
 /**
  * @brief Show the confirmation popup overlay

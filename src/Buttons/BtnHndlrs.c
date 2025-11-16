@@ -64,16 +64,21 @@ static void onConfirmStartRoast(void);
 static void onCancelStartRoast(void);
 static void onBackFromSelectRoast(void);
 
+static void onBackFromRoast(void);
+static void onConfirmEndRoast(void);
+static void onCancelEndRoast(void);
+
 /**
- * @brief Create a confirmation popup with message and callbacks
+ * @brief Create a confirmation popup with message and sets button handlers
  * 
  * @param message The message to display in the popup. \0 terminated string.
  * @param onConfirm Callback function when the confirm action is selected
  * @param onCancel Callback function when the cancel action is selected
  */
-static void createConfirmationPopup(const char *message,
-                                    void (*onConfirm)(void),
-                                    void (*onCancel)(void));
+static void createConfirmationPopupWithHndlrs(const char *message,
+                                              void (*onConfirm)(void),
+                                              void (*onCancel)(void),
+                                              lv_color_t currScrBckgnd);
 
 /*******************************************************************************
  * LOCAL VARIABLES
@@ -274,10 +279,12 @@ static void onSelectSelectRoastMenu(void)
     ST_storedChart *selectedChart = &storedCharts[ui->selectedIndex];
     ESP_LOGI(TAG, "Starting roast with chart: %s", selectedChart->chartName);
     
-    // Show confirmation popup
     char message[128];
     snprintf(message, sizeof(message), "Start roasting with\n%s?", selectedChart->chartName);
-    createConfirmationPopup(message, onConfirmStartRoast, onCancelStartRoast);
+    createConfirmationPopupWithHndlrs(message,
+                                      onConfirmStartRoast,
+                                      onCancelStartRoast,
+                                      lv_color_hex(0x101010));
 }
 
 static void onConfirmStartRoast(void)
@@ -286,6 +293,8 @@ static void onConfirmStartRoast(void)
 
     display_hideConfirmationPopup();
     
+    setBtnsCallbacks(onBackFromRoast, NULL, NULL, NULL);
+
     ST_VerticalMenuUi *ui = display_getSelectRoastMenuUi();
     ST_storedChart *selectedChart = &storedCharts[ui->selectedIndex];
     
@@ -317,12 +326,48 @@ static void onBackFromSelectRoast(void)
     display_showMainMenu();
 }
 
-static void createConfirmationPopup(const char *message,
-                                    void (*onConfirm)(void),
-                                    void (*onCancel)(void))
+static void createConfirmationPopupWithHndlrs(const char *message,
+                                              void (*onConfirm)(void),
+                                              void (*onCancel)(void),
+                                              lv_color_t currScrBckgnd)
 {
-    setBtnsCallbacks(onCancelStartRoast, NULL, NULL, onConfirmStartRoast);
+    setBtnsCallbacks(onCancel, NULL, NULL, onConfirm);
     
-    display_createConfirmationPopup(message);
+    display_createConfirmationPopup(message, currScrBckgnd);
     display_showConfirmationPopup();
+}
+
+static void onBackFromRoast(void)
+{
+    char message[128];
+    snprintf(message, sizeof(message), "Are you sure to end the roast?");
+    createConfirmationPopupWithHndlrs(message,
+                                      onConfirmEndRoast,
+                                      onCancelEndRoast,
+                                      lv_palette_main(LV_PALETTE_NONE));
+}
+
+static void onConfirmEndRoast(void)
+{
+    ESP_LOGI(TAG, "End roast confirmed!");
+
+    display_hideConfirmationPopup();
+
+    pid_ctrlLoopStop();
+
+    setBtnsCallbacks(NULL,
+                     moveSelectionUpMainMenu,
+                     moveSelectionDownMainMenu,
+                     onSelectMainMenu);
+
+    display_showMainMenu();
+}
+
+static void onCancelEndRoast(void)
+{
+    ESP_LOGI(TAG, "End roast cancelled");
+
+    display_hideConfirmationPopup();
+    
+    setBtnsCallbacks(onBackFromRoast, NULL, NULL, NULL);
 }

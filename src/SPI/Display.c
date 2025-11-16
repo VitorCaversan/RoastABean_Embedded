@@ -308,16 +308,10 @@ extern void display_createRoastChart(const float *profile, uint32_t totalMins, f
     lv_obj_set_style_bg_color(roastChartUi.screen, lv_palette_main(LV_PALETTE_NONE), 0);  // Light brown/tan (RGB)
     lv_obj_set_style_bg_opa(roastChartUi.screen, LV_OPA_COVER, 0);
 
-    // Title
-    lv_obj_t *title = lv_label_create(roastChartUi.screen);
-    lv_label_set_text(title, "Roast Profile (°C)");
-    lv_obj_set_style_text_font(title, lv_theme_get_font_large(roastChartUi.screen), 0);
-    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 6);
-
     // Chart
     roastChartUi.chart = lv_chart_create(roastChartUi.screen);
     lv_obj_set_size(roastChartUi.chart, lv_pct(85), lv_pct(60));
-    lv_obj_align(roastChartUi.chart, LV_ALIGN_CENTER, 0, 10);
+    lv_obj_align(roastChartUi.chart, LV_ALIGN_TOP_MID, 0, 20);
     lv_chart_set_type(roastChartUi.chart, LV_CHART_TYPE_LINE);
     lv_chart_set_update_mode(roastChartUi.chart, LV_CHART_UPDATE_MODE_SHIFT); // we will address by index anyway
     lv_chart_set_point_count(roastChartUi.chart, totalMins);
@@ -365,6 +359,12 @@ extern void display_createRoastChart(const float *profile, uint32_t totalMins, f
         lv_chart_set_value_by_id(roastChartUi.chart, roastChartUi.seriesCurrent, m, LV_CHART_POINT_NONE);
     }
 
+    // Title
+    lv_obj_t *title = lv_label_create(roastChartUi.screen);
+    lv_label_set_text(title, "Roast Profile (°C)");
+    lv_obj_set_style_text_font(title, lv_theme_get_font_large(roastChartUi.screen), 0);
+    lv_obj_align(title, LV_ALIGN_OUT_TOP_LEFT, 20, -1);
+
     // Legend labels
     lv_obj_t *legend = lv_label_create(roastChartUi.screen);
     lv_label_set_text(legend, "#FF8000 Target#  #0080FF Current#");  // RGB format
@@ -374,7 +374,30 @@ extern void display_createRoastChart(const float *profile, uint32_t totalMins, f
     // Info line
     roastChartUi.labelInfo = lv_label_create(roastChartUi.screen);
     lv_label_set_text(roastChartUi.labelInfo, "Tnow: --.-°C | Ttgt: --.-°C | Left: --:--");
-    lv_obj_align(roastChartUi.labelInfo, LV_ALIGN_BOTTOM_MID, 0, -6);
+    lv_obj_align_to(roastChartUi.labelInfo, roastChartUi.chart, LV_ALIGN_OUT_BOTTOM_MID, 0, 20);
+
+    // Bottom bar with fixed buttons
+    lv_style_reset(&roastChartUi.styleBottomBar);
+    lv_style_init(&roastChartUi.styleBottomBar);
+    lv_style_set_bg_opa(&roastChartUi.styleBottomBar, LV_OPA_0);
+    lv_style_set_bg_color(&roastChartUi.styleBottomBar, lv_palette_main(LV_PALETTE_NONE));
+    lv_style_set_border_width(&roastChartUi.styleBottomBar, 0);
+    lv_style_set_pad_hor(&roastChartUi.styleBottomBar, 6);
+    lv_style_set_pad_bottom(&roastChartUi.styleBottomBar, 2);
+
+    roastChartUi.bottomBar = lv_obj_create(roastChartUi.screen);
+    lv_obj_add_style(roastChartUi.bottomBar, &roastChartUi.styleBottomBar, 0);
+    lv_obj_set_width(roastChartUi.bottomBar, lv_pct(100));
+    lv_obj_set_height(roastChartUi.bottomBar, 44);
+    lv_obj_align(roastChartUi.bottomBar, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_set_flex_flow(roastChartUi.bottomBar, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(roastChartUi.bottomBar, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+    roastChartUi.btnReturn = lv_btn_create(roastChartUi.bottomBar);
+    lv_obj_set_size(roastChartUi.btnReturn, 70, 28);
+    lv_obj_t *lblRet = lv_label_create(roastChartUi.btnReturn);
+    lv_label_set_text(lblRet, LV_SYMBOL_CLOSE);
+    lv_obj_center(lblRet);
 
     // Load the screen (optional: or attach to existing)
     lv_scr_load(roastChartUi.screen);
@@ -388,13 +411,6 @@ extern void display_updateRoastChart(float currTargetTemp, uint32_t elapsedSecs,
 
     uint32_t minuteIdx = elapsedSecs / 60;
     if (minuteIdx >= roastChartUi.totalMins) minuteIdx = roastChartUi.totalMins - 1;
-
-    // We can read back target from the chart series (or keep your tempProfile accessible)
-    // If you prefer direct array access, expose tempProfile[] here.
-    // Below we just read the plotted point (convert back from lv_coord_t).
-    // NOTE: lv_chart_get_point_pos_by_id gives pixel pos, not value; so use your array if available.
-    // For simplicity, pass target array from your context if you want exact numbers on the label.
-    // Here we’ll just skip exact target value if not provided.
 
     bool ok = lvgl_port_lock(0);
     if (!ok) return;
@@ -422,6 +438,7 @@ extern void display_updateRoastChart(float currTargetTemp, uint32_t elapsedSecs,
              currTargetTemp,
              leftBuf);
     lv_label_set_text(roastChartUi.labelInfo, info);
+    lv_obj_align_to(roastChartUi.labelInfo, roastChartUi.chart, LV_ALIGN_OUT_BOTTOM_MID, 0, 20);
 
     // Optional: keep the chart view scrolled to show progress if totalMins is large
     // lv_chart_set_zoom_x(roastChartUi.chart, zoomValue); // if you want zooming behaviour
@@ -507,7 +524,7 @@ extern ST_VerticalMenuUi *display_getSelectRoastMenuUi(void)
     return &selectRoastMenuUi;
 }
 
-extern void display_createConfirmationPopup(const char *message)
+extern void display_createConfirmationPopup(const char *message, lv_color_t currScrBckgnd)
 {
     bool ok = lvgl_port_lock(0);
     if (!ok) {
@@ -516,10 +533,19 @@ extern void display_createConfirmationPopup(const char *message)
     }
 
     // If popup already exists, just update the message
-    if (confirmationPopupUi.overlay != NULL) {
-        if (confirmationPopupUi.messageLabel != NULL) {
+    if (confirmationPopupUi.overlay != NULL)
+    {
+        if (confirmationPopupUi.messageLabel != NULL)
+        {
             lv_label_set_text(confirmationPopupUi.messageLabel, message);
         }
+
+        if (confirmationPopupUi.bottomBar != NULL)
+        {
+            lv_style_set_bg_color(&confirmationPopupUi.styleBottomBar, currScrBckgnd);
+            lv_obj_add_style(confirmationPopupUi.bottomBar, &confirmationPopupUi.styleBottomBar, 0);
+        }
+        
         lvgl_port_unlock();
         return;
     }
@@ -568,9 +594,10 @@ extern void display_createConfirmationPopup(const char *message)
     lv_style_reset(&confirmationPopupUi.styleBottomBar);
     lv_style_init(&confirmationPopupUi.styleBottomBar);
     lv_style_set_bg_opa(&confirmationPopupUi.styleBottomBar, LV_OPA_COVER);
-    lv_style_set_bg_color(&confirmationPopupUi.styleBottomBar, lv_color_hex(0x202020));
+    lv_style_set_bg_color(&confirmationPopupUi.styleBottomBar, currScrBckgnd);
     lv_style_set_border_width(&confirmationPopupUi.styleBottomBar, 0);
-    lv_style_set_pad_all(&confirmationPopupUi.styleBottomBar, 6);
+    lv_style_set_pad_hor(&confirmationPopupUi.styleBottomBar, 6);
+    lv_style_set_pad_bottom(&confirmationPopupUi.styleBottomBar, 2);
 
     confirmationPopupUi.bottomBar = lv_obj_create(confirmationPopupUi.overlay);
     lv_obj_add_style(confirmationPopupUi.bottomBar, &confirmationPopupUi.styleBottomBar, 0);
@@ -708,10 +735,11 @@ static void createVerticalMenuUi(ST_VerticalMenuUi *vertMenuUi, const char *menu
 
     lv_style_reset(&vertMenuUi->styleBottomBar);
     lv_style_init(&vertMenuUi->styleBottomBar);
-    lv_style_set_bg_opa(&vertMenuUi->styleBottomBar, LV_OPA_COVER);
-    lv_style_set_bg_color(&vertMenuUi->styleBottomBar, lv_color_hex(0x202020));
+    lv_style_set_bg_opa(&vertMenuUi->styleBottomBar, LV_OPA_0);
+    lv_style_set_bg_color(&vertMenuUi->styleBottomBar, lv_palette_main(LV_PALETTE_NONE));
     lv_style_set_border_width(&vertMenuUi->styleBottomBar, 0);
-    lv_style_set_pad_all(&vertMenuUi->styleBottomBar, 6);
+    lv_style_set_pad_hor(&vertMenuUi->styleBottomBar, 6);
+    lv_style_set_pad_bottom(&vertMenuUi->styleBottomBar, 2);
 
     // Screen
     vertMenuUi->screen = lv_obj_create(NULL);
@@ -727,7 +755,7 @@ static void createVerticalMenuUi(ST_VerticalMenuUi *vertMenuUi, const char *menu
 
     // Menu container (center area)
     vertMenuUi->menuContainer = lv_obj_create(vertMenuUi->screen);
-    lv_obj_set_size(vertMenuUi->menuContainer, lv_pct(98), lv_pct(75));
+    lv_obj_set_size(vertMenuUi->menuContainer, lv_pct(98), lv_pct(70));
     lv_obj_align(vertMenuUi->menuContainer, LV_ALIGN_TOP_MID, 0, 26);
     lv_obj_set_flex_flow(vertMenuUi->menuContainer, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(vertMenuUi->menuContainer, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER);
