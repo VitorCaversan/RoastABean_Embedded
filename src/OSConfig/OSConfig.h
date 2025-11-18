@@ -18,10 +18,8 @@
 typedef enum EN_screenEvents
 {
     SCR_EVENT_NONE = 0,
-    SCR_EVENT_UPDATE,
-    SCR_EVENT_SHOW_CHART,
-    SCR_EVENT_HIDE_CHART,
     SCR_EVENT_UPDATE_CHART,
+    SCR_EVENT_END_ROAST,
     
     SCR_EVENT_QTY // Must be the last element
 } EN_screenEvents;

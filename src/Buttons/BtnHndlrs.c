@@ -80,6 +80,11 @@ static void createConfirmationPopupWithHndlrs(const char *message,
                                               void (*onCancel)(void),
                                               lv_color_t currScrBckgnd);
 
+/**
+ * @brief Ends roast by stopping the timer and going back to the main menu
+ */
+static void endRoast(void);
+
 /*******************************************************************************
  * LOCAL VARIABLES
  ******************************************************************************/
@@ -107,6 +112,10 @@ extern void btnHndlrs_btnHndlrsTask(void *arg)
                 case SCR_EVENT_UPDATE_CHART:
                     ESP_LOGI(TAG, "Update chart");
                     updateChart((ST_chartUpdateData *)msg.data);
+                break;
+                case SCR_EVENT_END_ROAST:
+                    ESP_LOGI(TAG, "Update chart");
+                    endRoast();
                 break;
                 default:
                     ESP_LOGW(TAG, "Unknown screen event: %d", msg.event);
@@ -271,6 +280,21 @@ static void setSelectRoastMenu(void)
 
             sprintf(storedCharts[i].chartName, "Medium Roast");
         }
+        else if (i == 1)
+        {
+            float profile[] = {
+                30.0f
+            };
+            
+            for (j = 0; j < (sizeof(profile) / sizeof(profile[0])); j++)
+            {
+                storedCharts[i].tempProfile[j] = profile[j];
+            }
+
+            storedCharts[i].totalMins = j;
+
+            sprintf(storedCharts[i].chartName, "Testo rosto");
+        }
         else
         {
             for (j = 0; j < (MAX_ROAST_TIME_IN_MIN / 4); j++)
@@ -345,6 +369,8 @@ static void onConfirmStartRoast(void)
     display_createRoastChart(selectedChart->tempProfile, selectedChart->totalMins, NAN, NAN);
     display_showRoastChart();
     pid_ctrlLoopStart(selectedChart->tempProfile, selectedChart->totalMins);
+
+    DCMotor_rampSpeedUp(TB_BOARD_1, MOTOR_A, 0, 30, 8);
 }
 
 static void onCancelStartRoast(void)
@@ -415,4 +441,30 @@ static void onCancelEndRoast(void)
     display_hideConfirmationPopup();
     
     setBtnsCallbacks(onBackFromRoast, NULL, NULL, NULL);
+}
+
+static void endRoast(void)
+{
+    pid_ctrlLoopStop();
+
+    ST_motorControlContext *motorCtrlCtx = DCMotor_getContextFromMotor(TB_BOARD_2);
+
+    tb6612_setSpeed(&motorCtrlCtx->motor, MOTOR_B, 100);
+
+    vTaskDelay(pdMS_TO_TICKS(500));
+
+    tb6612_setSpeed(&motorCtrlCtx->motor, MOTOR_B, 0);
+
+    vTaskDelay(pdMS_TO_TICKS(5000));
+
+    motorCtrlCtx = DCMotor_getContextFromMotor(TB_BOARD_1);
+
+    tb6612_setSpeed(&motorCtrlCtx->motor, MOTOR_A, 0);
+
+    setBtnsCallbacks(NULL,
+                     moveSelectionUpMainMenu,
+                     moveSelectionDownMainMenu,
+                     onSelectMainMenu);
+
+    display_showMainMenu();
 }

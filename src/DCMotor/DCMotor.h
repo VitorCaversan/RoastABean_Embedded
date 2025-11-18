@@ -69,4 +69,19 @@ extern void DCMotor_initPIDCtrl(void);
  */
 extern ST_motorControlContext *DCMotor_getContextFromMotor(EN_TbBoard motor);
 
+/**
+ * @brief Speed motor up in intervals of 1 second
+ * 
+ * @param tbBoard The TB board where the motor is connected
+ * @param motorId The motor id
+ * @param startingPercent Starting point for the ramp
+ * @param targetPercent Endpoint for the ramp
+ * @param step The steps taken every second
+ */
+extern void DCMotor_rampSpeedUp(EN_TbBoard tbBoard,
+                                EN_tbMotorId motorId,
+                                float startingPercent,
+                                float targetPercent,
+                                float step);
+
 #endif // DC_MOTOR_H

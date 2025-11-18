@@ -128,7 +128,8 @@ static void pidLoopCallback(void *args)
     }
 
     unsigned long nowUs = esp_timer_get_time();
-    float targetTemp = getTargetTemperature(ctx, nowUs - ctx->startingProcessUs);
+    unsigned long elapsedUs = (nowUs - ctx->startingProcessUs);
+    float targetTemp = getTargetTemperature(ctx, elapsedUs);
     float error = targetTemp - currTemp;
     
     float newPwrPercent = 0.0f;
@@ -139,14 +140,23 @@ static void pidLoopCallback(void *args)
         newPwrPercent = 100.0f;
     triac_setPwrPercent(newPwrPercent);
 
-    chartUpdateData.currTargetTemp = targetTemp;
-    chartUpdateData.elapsedSecs = US_TO_SECONDS(nowUs - ctx->startingProcessUs);
-    chartUpdateData.currentTemp = currTemp;
+    ST_screenMsg screenMsg = {0};
 
-    ST_screenMsg screenMsg = {
-        .event = SCR_EVENT_UPDATE_CHART,
-        .data = &chartUpdateData
-    };
+    unsigned long elapsedMins = (elapsedUs / USECONDS_IN_1_MIN);
+    if (elapsedMins >= ctx->minsToControl)
+    {
+        screenMsg.event = SCR_EVENT_END_ROAST;
+        screenMsg.data = NULL;
+    }
+    else
+    {
+        chartUpdateData.currTargetTemp = targetTemp;
+        chartUpdateData.elapsedSecs = US_TO_SECONDS(nowUs - ctx->startingProcessUs);
+        chartUpdateData.currentTemp = currTemp;
+    
+        screenMsg.event = SCR_EVENT_UPDATE_CHART;
+        screenMsg.data = &chartUpdateData;
+    }
 
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     xQueueSendFromISR(OS_btnHndlrsTaskQueue, &screenMsg, &xHigherPriorityTaskWoken);

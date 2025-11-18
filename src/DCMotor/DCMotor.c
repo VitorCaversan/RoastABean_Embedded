@@ -147,7 +147,7 @@ extern void DCMotor_initPIDCtrl(void)
     ESP_LOGI(TAG, "Create a timer to do PID calculation periodically");
     const esp_timer_create_args_t periodic_timer_args = {
         .callback = pid_loop_cb,
-        .arg = &motor_ctrl_ctx,
+        .arg = &motorCtrlCtx,
         .name = "pid_loop"
     };
     esp_timer_handle_t pid_loop_timer = NULL;
@@ -167,6 +167,29 @@ extern void DCMotor_initPIDCtrl(void)
 extern ST_motorControlContext *DCMotor_getContextFromMotor(EN_TbBoard motor)
 {
     return &motorsCtrlCntxt[motor];
+}
+
+extern void DCMotor_rampSpeedUp(EN_TbBoard tbBoard,
+                                EN_tbMotorId motorId,
+                                float startingPercent,
+                                float targetPercent,
+                                float step)
+{
+    if ((targetPercent < startingPercent) || (step > 100.0f))
+    {
+        ESP_LOGI(TAG, "Speed ramp not possible");
+    }
+
+    ST_motorControlContext *motorCtx = DCMotor_getContextFromMotor(tbBoard);
+
+    for (; startingPercent <= targetPercent; startingPercent += step)
+    {
+        tb6612_setSpeed(&motorCtx->motor, motorId, startingPercent);
+    
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+
+    tb6612_setSpeed(&motorCtx->motor, motorId, targetPercent);
 }
 
 /*******************************************************************************

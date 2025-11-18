@@ -16,6 +16,7 @@
 #include "Buttons.h"
 #include "TempSens.h"
 #include "PIDControl.h"
+#include "DCMotor.h"
 
 /*******************************************************************************
  * MACROS AND DEFINES

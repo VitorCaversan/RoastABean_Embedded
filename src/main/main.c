@@ -79,11 +79,11 @@ void app_main(void)
 
 static void mainTask(void *arg)
 {
-    ST_motorControlContext *motor_ctrl_ctx = DCMotor_getContextFromMotor(TB_BOARD_1);
+    ST_motorControlContext *motorCtrlCtx = DCMotor_getContextFromMotor(TB_BOARD_1);
 
     ESP_LOGI(TAG, "Enable motor forward");
-    tb6612_setSpeed(&motor_ctrl_ctx->motor, MOTOR_A, 0);
-    tb6612_setSpeed(&motor_ctrl_ctx->motor, MOTOR_B, 0);
+    tb6612_setSpeed(&motorCtrlCtx->motor, MOTOR_A, 0);
+    tb6612_setSpeed(&motorCtrlCtx->motor, MOTOR_B, 0);
 
     float temp = 0.0f;
     float pwm = 0.0f;
@@ -158,7 +158,7 @@ static void mainTask(void *arg)
         // the following logging format is according to the requirement of serial-studio frame format
         // also see the dashboard config file `serial-studio-dashboard.json` for more information
 #if SERIAL_STUDIO_DEBUG
-        printf("/*%d*/\r\n", motor_ctrl_ctx.report_pulses);
+        printf("/*%d*/\r\n", motorCtrlCtx.report_pulses);
 #endif
     }
 }
