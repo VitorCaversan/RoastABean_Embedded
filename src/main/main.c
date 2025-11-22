@@ -18,6 +18,7 @@
 #include "OSConfig.h"
 #include "PIDControl.h"
 #include "BtnHndlrs.h"
+#include "Bluetooth.h"
 
 /*******************************************************************************
  * MACROS AND DEFINES
