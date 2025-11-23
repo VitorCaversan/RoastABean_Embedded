@@ -17,6 +17,7 @@
 #include "TempSens.h"
 #include "PIDControl.h"
 #include "DCMotor.h"
+#include "Bluetooth.h"
 
 /*******************************************************************************
  * MACROS AND DEFINES

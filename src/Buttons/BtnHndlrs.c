@@ -249,7 +249,7 @@ static void onSelectMainMenu(void)
         break;
         case 2: // "Connect"
             ESP_LOGI(TAG, "Connecting...");
-            // TODO: Navigate to connection/settings screen
+            bluetooth_startAdvertising();
         break;
         default:
             ESP_LOGW(TAG, "Unknown menu option: %d", ui->selectedIndex);

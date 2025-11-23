@@ -26,25 +26,37 @@ static uint16_t connHandle = 0;
 static uint8_t receivedData[BLE_MAX_DATA_LEN];
 static uint16_t receivedDataLen = 0;
 
-// GATT service definition
-static const ble_uuid128_t gatt_svr_svc_uuid =
-    BLE_UUID128_INIT(ROASTABEAN_SERVICE_UUID);
+// Nordic UART Service (NUS) UUIDs
+static const ble_uuid128_t nus_svc_uuid =
+    BLE_UUID128_INIT(BLE_SVC_NUS_UUID128);
 
-static const ble_uuid128_t gatt_svr_chr_json_uuid =
-    BLE_UUID128_INIT(ROASTABEAN_CHAR_JSON_UUID);
+static const ble_uuid128_t nus_chr_rx_uuid =
+    BLE_UUID128_INIT(BLE_SVC_NUS_CHR_RX_UUID128);
 
-static uint16_t gatt_svr_chr_json_handle;
+static const ble_uuid128_t nus_chr_tx_uuid =
+    BLE_UUID128_INIT(BLE_SVC_NUS_CHR_TX_UUID128);
+
+static uint16_t nus_rx_handle;
+static uint16_t nus_tx_handle;
 
 static const struct ble_gatt_svc_def gatt_svr_svcs[] = {
     {
         .type = BLE_GATT_SVC_TYPE_PRIMARY,
-        .uuid = &gatt_svr_svc_uuid.u,
+        .uuid = &nus_svc_uuid.u,
         .characteristics = (struct ble_gatt_chr_def[]) {
             {
-                .uuid = &gatt_svr_chr_json_uuid.u,
+                // RX characteristic - phone writes data to ESP32
+                .uuid = &nus_chr_rx_uuid.u,
                 .access_cb = bluetooth_gattCharAccessCb,
                 .flags = BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_WRITE_NO_RSP,
-                .val_handle = &gatt_svr_chr_json_handle,
+                .val_handle = &nus_rx_handle,
+            },
+            {
+                // TX characteristic - ESP32 notifies phone
+                .uuid = &nus_chr_tx_uuid.u,
+                .access_cb = bluetooth_gattCharAccessCb,
+                .flags = BLE_GATT_CHR_F_NOTIFY,
+                .val_handle = &nus_tx_handle,
             },
             {0} // No more characteristics
         }
@@ -110,7 +122,7 @@ extern void bluetooth_init(void)
     ble_svc_gap_init();
     ble_svc_gatt_init();
     
-    // Register custom GATT service
+    // Register Nordic UART Service (NUS)
     int rc = ble_gatts_count_cfg(gatt_svr_svcs);
     if (rc != 0) {
         ESP_LOGE(TAG, "Failed to count GATT configuration: %d", rc);
@@ -123,6 +135,8 @@ extern void bluetooth_init(void)
         return;
     }
     
+    ESP_LOGI(TAG, "Nordic UART Service registered");
+    
     // Start NimBLE host task
     nimble_port_freertos_init(bluetooth_hostTask);
     
@@ -132,28 +146,39 @@ extern void bluetooth_init(void)
 extern void bluetooth_startAdvertising(void)
 {
     struct ble_gap_adv_params advParams;
-    struct ble_hs_adv_fields fields;
+    struct ble_hs_adv_fields advertiseFields;
+    struct ble_hs_adv_fields responseFields;
     
     memset(&advParams, 0, sizeof(advParams));
-    memset(&fields, 0, sizeof(fields));
+    memset(&advertiseFields, 0, sizeof(advertiseFields));
+    memset(&responseFields, 0, sizeof(responseFields));
     
     // Set advertising parameters
     advParams.conn_mode = BLE_GAP_CONN_MODE_UND;
     advParams.disc_mode = BLE_GAP_DISC_MODE_GEN;
     
-    // Set advertising data
-    fields.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
-    fields.name = (uint8_t *)BLE_DEVICE_NAME;
-    fields.name_len = strlen(BLE_DEVICE_NAME);
-    fields.name_is_complete = 1;
+    // Set advertising data (31 bytes max)
+    advertiseFields.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
     
-    ble_gap_adv_set_fields(&fields);
+    // Advertise NUS service UUID in advertising packet
+    advertiseFields.uuids128 = &nus_svc_uuid;
+    advertiseFields.num_uuids128 = 1;
+    advertiseFields.uuids128_is_complete = 1;
+    
+    ble_gap_adv_set_fields(&advertiseFields);
+    
+    // Put device name in scan response data (separate 31-byte packet)
+    responseFields.name = (uint8_t *)BLE_DEVICE_NAME;
+    responseFields.name_len = strlen(BLE_DEVICE_NAME);
+    responseFields.name_is_complete = 1;
+    
+    ble_gap_adv_rsp_set_fields(&responseFields);
     
     // Start advertising
     ble_gap_adv_start(BLE_OWN_ADDR_PUBLIC, NULL, BLE_HS_FOREVER,
                       &advParams, bluetooth_gapEvent, NULL);
     
-    ESP_LOGI(TAG, "Advertising started");
+    ESP_LOGI(TAG, "Advertising started with NUS UUID and device name");
 }
 
 extern void bluetooth_stopAdvertising(void)
@@ -177,6 +202,34 @@ extern uint16_t bluetooth_getReceivedData(uint8_t *buffer, uint16_t bufferSize)
     memcpy(buffer, receivedData, copyLen);
     
     return copyLen;
+}
+
+extern int bluetooth_sendData(const uint8_t *data, uint16_t dataLen)
+{
+    if (!isConnected) {
+        ESP_LOGW(TAG, "Cannot send data: device not connected");
+        return -1;
+    }
+    
+    if (data == NULL || dataLen == 0) {
+        ESP_LOGW(TAG, "Invalid data or length");
+        return -1;
+    }
+    
+    struct os_mbuf *om = ble_hs_mbuf_from_flat(data, dataLen);
+    if (om == NULL) {
+        ESP_LOGE(TAG, "Failed to allocate mbuf for notification");
+        return -1;
+    }
+    
+    int rc = ble_gattc_notify_custom(connHandle, nus_tx_handle, om);
+    if (rc != 0) {
+        ESP_LOGE(TAG, "Failed to send notification: %d", rc);
+        return rc;
+    }
+    
+    ESP_LOGI(TAG, "Sent %d bytes via NUS TX", dataLen);
+    return 0;
 }
 
 /*******************************************************************************

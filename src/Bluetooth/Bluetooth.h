@@ -25,10 +25,13 @@
 #define BLE_DEVICE_NAME         "RoastABean"
 #define BLE_MAX_DATA_LEN        2048
 
-// Custom GATT Service UUID (128-bit): 12345678-1234-5678-1234-56789abcdef0
-#define ROASTABEAN_SERVICE_UUID     0xDEF0, 0x9ABC, 0x5678, 0x1234, 0x5678, 0x1234, 0x5678, 0x1234
-// Characteristic UUID for JSON data: 12345678-1234-5678-1234-56789abcdef1
-#define ROASTABEAN_CHAR_JSON_UUID   0xDEF1, 0x9ABC, 0x5678, 0x1234, 0x5678, 0x1234, 0x5678, 0x1234
+// Nordic UART Service (NUS) UUIDs
+#define BLE_SVC_NUS_UUID16                                  0x0001
+#define BLE_SVC_NUS_CHR_RX_UUID16                          0x0002  // Write (phone -> ESP32)
+#define BLE_SVC_NUS_CHR_TX_UUID16                          0x0003  // Notify (ESP32 -> phone)
+#define BLE_SVC_NUS_UUID128                                 0x9E, 0xCA, 0xDC, 0x24, 0x0E, 0xE5, 0xA9, 0xE0, 0x93, 0xF3, 0xA3, 0xB5, 0x01, 0x00, 0x40, 0x6E
+#define BLE_SVC_NUS_CHR_RX_UUID128                         0x9E, 0xCA, 0xDC, 0x24, 0x0E, 0xE5, 0xA9, 0xE0, 0x93, 0xF3, 0xA3, 0xB5, 0x02, 0x00, 0x40, 0x6E
+#define BLE_SVC_NUS_CHR_TX_UUID128                         0x9E, 0xCA, 0xDC, 0x24, 0x0E, 0xE5, 0xA9, 0xE0, 0x93, 0xF3, 0xA3, 0xB5, 0x03, 0x00, 0x40, 0x6E
 
 /*******************************************************************************
  * TYPEDEFS AND STRUCTURES
@@ -73,5 +76,14 @@ extern bool bluetooth_isConnected(void);
  * @return Number of bytes copied, 0 if no data available
  */
 extern uint16_t bluetooth_getReceivedData(uint8_t *buffer, uint16_t bufferSize);
+
+/**
+ * @brief Send data to connected device via NUS TX characteristic
+ * 
+ * @param data Pointer to data to send
+ * @param dataLen Length of data in bytes
+ * @return 0 on success, error code otherwise
+ */
+extern int bluetooth_sendData(const uint8_t *data, uint16_t dataLen);
 
 #endif // BLUETOOTH_H
