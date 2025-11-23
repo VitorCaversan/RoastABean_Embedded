@@ -10,12 +10,12 @@
 /*******************************************************************************
  * LOCAL FUNCTION DECLARATIONS
  ******************************************************************************/
-static void bluetooth_onSync(void);
-static void bluetooth_onReset(int reason);
-static int bluetooth_gapEvent(struct ble_gap_event *event, void *arg);
-static void bluetooth_hostTask(void *param);
-static int bluetooth_gattCharAccessCb(uint16_t conn_handle, uint16_t attr_handle,
-                                      struct ble_gatt_access_ctxt *ctxt, void *arg);
+static void onSync(void);
+static void onReset(int reason);
+static int gapEvent(struct ble_gap_event *event, void *arg);
+static void hostTask(void *param);
+static int gattCharAccessCb(uint16_t conn_handle, uint16_t attr_handle,
+                            struct ble_gatt_access_ctxt *ctxt, void *arg);
 
 /*******************************************************************************
  * LOCAL VARIABLES
@@ -27,36 +27,36 @@ static uint8_t receivedData[BLE_MAX_DATA_LEN];
 static uint16_t receivedDataLen = 0;
 
 // Nordic UART Service (NUS) UUIDs
-static const ble_uuid128_t nus_svc_uuid =
+static const ble_uuid128_t nusSvcUuid =
     BLE_UUID128_INIT(BLE_SVC_NUS_UUID128);
 
-static const ble_uuid128_t nus_chr_rx_uuid =
+static const ble_uuid128_t nusChrRxUuid =
     BLE_UUID128_INIT(BLE_SVC_NUS_CHR_RX_UUID128);
 
-static const ble_uuid128_t nus_chr_tx_uuid =
+static const ble_uuid128_t nusChrTxUuid =
     BLE_UUID128_INIT(BLE_SVC_NUS_CHR_TX_UUID128);
 
-static uint16_t nus_rx_handle;
-static uint16_t nus_tx_handle;
+static uint16_t nusRxHandle;
+static uint16_t nusTxHandle;
 
-static const struct ble_gatt_svc_def gatt_svr_svcs[] = {
+static const struct ble_gatt_svc_def gattSvrSvcs[] = {
     {
         .type = BLE_GATT_SVC_TYPE_PRIMARY,
-        .uuid = &nus_svc_uuid.u,
+        .uuid = &nusSvcUuid.u,
         .characteristics = (struct ble_gatt_chr_def[]) {
             {
                 // RX characteristic - phone writes data to ESP32
-                .uuid = &nus_chr_rx_uuid.u,
-                .access_cb = bluetooth_gattCharAccessCb,
+                .uuid = &nusChrRxUuid.u,
+                .access_cb = gattCharAccessCb,
                 .flags = BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_WRITE_NO_RSP,
-                .val_handle = &nus_rx_handle,
+                .val_handle = &nusRxHandle,
             },
             {
                 // TX characteristic - ESP32 notifies phone
-                .uuid = &nus_chr_tx_uuid.u,
-                .access_cb = bluetooth_gattCharAccessCb,
+                .uuid = &nusChrTxUuid.u,
+                .access_cb = gattCharAccessCb,
                 .flags = BLE_GATT_CHR_F_NOTIFY,
-                .val_handle = &nus_tx_handle,
+                .val_handle = &nusTxHandle,
             },
             {0} // No more characteristics
         }
@@ -112,8 +112,8 @@ extern void bluetooth_init(void)
     ESP_ERROR_CHECK(nimble_port_init());
     
     // Initialize the NimBLE host configuration
-    ble_hs_cfg.sync_cb = bluetooth_onSync;
-    ble_hs_cfg.reset_cb = bluetooth_onReset;
+    ble_hs_cfg.sync_cb = onSync;
+    ble_hs_cfg.reset_cb = onReset;
     
     // Set device name
     ble_svc_gap_device_name_set(BLE_DEVICE_NAME);
@@ -123,13 +123,13 @@ extern void bluetooth_init(void)
     ble_svc_gatt_init();
     
     // Register Nordic UART Service (NUS)
-    int rc = ble_gatts_count_cfg(gatt_svr_svcs);
+    int rc = ble_gatts_count_cfg(gattSvrSvcs);
     if (rc != 0) {
         ESP_LOGE(TAG, "Failed to count GATT configuration: %d", rc);
         return;
     }
     
-    rc = ble_gatts_add_svcs(gatt_svr_svcs);
+    rc = ble_gatts_add_svcs(gattSvrSvcs);
     if (rc != 0) {
         ESP_LOGE(TAG, "Failed to add GATT services: %d", rc);
         return;
@@ -138,7 +138,7 @@ extern void bluetooth_init(void)
     ESP_LOGI(TAG, "Nordic UART Service registered");
     
     // Start NimBLE host task
-    nimble_port_freertos_init(bluetooth_hostTask);
+    nimble_port_freertos_init(hostTask);
     
     ESP_LOGI(TAG, "NimBLE initialized");
 }
@@ -161,7 +161,7 @@ extern void bluetooth_startAdvertising(void)
     advertiseFields.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
     
     // Advertise NUS service UUID in advertising packet
-    advertiseFields.uuids128 = &nus_svc_uuid;
+    advertiseFields.uuids128 = &nusSvcUuid;
     advertiseFields.num_uuids128 = 1;
     advertiseFields.uuids128_is_complete = 1;
     
@@ -176,7 +176,7 @@ extern void bluetooth_startAdvertising(void)
     
     // Start advertising
     ble_gap_adv_start(BLE_OWN_ADDR_PUBLIC, NULL, BLE_HS_FOREVER,
-                      &advParams, bluetooth_gapEvent, NULL);
+                      &advParams, gapEvent, NULL);
     
     ESP_LOGI(TAG, "Advertising started with NUS UUID and device name");
 }
@@ -222,7 +222,7 @@ extern int bluetooth_sendData(const uint8_t *data, uint16_t dataLen)
         return -1;
     }
     
-    int rc = ble_gattc_notify_custom(connHandle, nus_tx_handle, om);
+    int rc = ble_gattc_notify_custom(connHandle, nusTxHandle, om);
     if (rc != 0) {
         ESP_LOGE(TAG, "Failed to send notification: %d", rc);
         return rc;
@@ -236,20 +236,17 @@ extern int bluetooth_sendData(const uint8_t *data, uint16_t dataLen)
  * LOCAL FUNCTIONS
  ******************************************************************************/
 
-static void bluetooth_onSync(void)
+static void onSync(void)
 {
     ESP_LOGI(TAG, "BLE Host synchronized");
-    
-    // Start advertising when host is ready
-    bluetooth_startAdvertising();
 }
 
-static void bluetooth_onReset(int reason)
+static void onReset(int reason)
 {
     ESP_LOGE(TAG, "BLE Host reset, reason: %d", reason);
 }
 
-static int bluetooth_gapEvent(struct ble_gap_event *event, void *arg)
+static int gapEvent(struct ble_gap_event *event, void *arg)
 {
     switch (event->type) {
         case BLE_GAP_EVENT_CONNECT:
@@ -282,9 +279,6 @@ static int bluetooth_gapEvent(struct ble_gap_event *event, void *arg)
                 ST_bleMsg msg = {.event = BLE_EVENT_DISCONNECTED, .dataLen = 0};
                 xQueueSend(OS_bleEventQueue, &msg, 0);
             }
-            
-            // Resume advertising after disconnect
-            bluetooth_startAdvertising();
             break;
             
         case BLE_GAP_EVENT_ADV_COMPLETE:
@@ -304,15 +298,15 @@ static int bluetooth_gapEvent(struct ble_gap_event *event, void *arg)
     return 0;
 }
 
-static void bluetooth_hostTask(void *param)
+static void hostTask(void *param)
 {
     ESP_LOGI(TAG, "BLE Host Task Started");
     nimble_port_run();
     nimble_port_freertos_deinit();
 }
 
-static int bluetooth_gattCharAccessCb(uint16_t conn_handle, uint16_t attr_handle,
-                                      struct ble_gatt_access_ctxt *ctxt, void *arg)
+static int gattCharAccessCb(uint16_t conn_handle, uint16_t attr_handle,
+                            struct ble_gatt_access_ctxt *ctxt, void *arg)
 {
     switch (ctxt->op) {
         case BLE_GATT_ACCESS_OP_WRITE_CHR:
