@@ -34,20 +34,25 @@ static void IRAM_ATTR btnIsrHndlr(void *arg)
 {
     const int pin = (int)(intptr_t)arg;
     
-    EN_buttons msg = BTN_1_PRESSED;
+    ST_extEventMsg msg = {0};
+    uint8_t pressedBtnIdx = 0;
     switch (pin)
     {
         case BTN_1_GPIO_PIN:
-            msg = BTN_1_PRESSED;
+            pressedBtnIdx = 0;
+            msg.event = EXT_EVENT_BTN_1_PRESSED;
             break;
         case BTN_2_GPIO_PIN:
-            msg = BTN_2_PRESSED;
+            pressedBtnIdx = 1;
+            msg.event = EXT_EVENT_BTN_2_PRESSED;
             break;
         case BTN_3_GPIO_PIN:
-            msg = BTN_3_PRESSED;
+            pressedBtnIdx = 2;
+            msg.event = EXT_EVENT_BTN_3_PRESSED;
             break;
         case BTN_4_GPIO_PIN:
-            msg = BTN_4_PRESSED;
+            pressedBtnIdx = 3;
+            msg.event = EXT_EVENT_BTN_4_PRESSED;
             break;
         default:
             // Unknown pin, should not happen
@@ -56,11 +61,11 @@ static void IRAM_ATTR btnIsrHndlr(void *arg)
 
 #if DEBOUNCE_INTERVAL_US > 0
     unsigned long now = esp_timer_get_time();
-    unsigned long dt  = now - lastIsrInUs[msg];
+    unsigned long dt  = now - lastIsrInUs[pressedBtnIdx];
     if (dt < DEBOUNCE_INTERVAL_US) {
         return;
     }
-    lastIsrInUs[msg] = now;
+    lastIsrInUs[pressedBtnIdx] = now;
 #else
     unsigned long now = esp_timer_get_time();
 #endif
@@ -68,7 +73,7 @@ static void IRAM_ATTR btnIsrHndlr(void *arg)
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
     // Best effort enqueue; if queue is full, drop or handle later.
-    xQueueSendFromISR(OS_mainTaskQueue, &msg, &xHigherPriorityTaskWoken);
+    xQueueSendFromISR(OS_btnHndlrsTaskQueue, &msg, &xHigherPriorityTaskWoken);
 
     if (xHigherPriorityTaskWoken)
     {

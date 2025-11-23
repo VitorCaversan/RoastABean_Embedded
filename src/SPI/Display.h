@@ -175,7 +175,7 @@ extern void display_showRoastChart(void);
 extern void display_updateRoastChart(float currTargetTemp, uint32_t elapsedSecs, float currentTemp);
 
 /**
- * @brief Create the start menu UI
+ * @brief Create the start menu UI. It is shown with display_showMainMenu()
  */
 extern void display_createMainMenu();
 
@@ -200,7 +200,8 @@ extern void display_applySelectionStyle(ST_VerticalMenuUi *ui, int optionQty);
 extern ST_VerticalMenuUi *display_getMainMenuUi(void);
 
 /**
- * @brief Create the select roast menu UI
+ * @brief Create the select roast menu UI. Labels will be updated when shown with
+ * display_showSelectRoastMenu()
  */
 extern void display_createSelectRoastMenu(void);
 

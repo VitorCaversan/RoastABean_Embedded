@@ -140,12 +140,12 @@ static void pidLoopCallback(void *args)
         newPwrPercent = 100.0f;
     triac_setPwrPercent(newPwrPercent);
 
-    ST_screenMsg screenMsg = {0};
+    ST_extEventMsg screenMsg = {0};
 
     unsigned long elapsedMins = (elapsedUs / USECONDS_IN_1_MIN);
     if (elapsedMins >= ctx->minsToControl)
     {
-        screenMsg.event = SCR_EVENT_END_ROAST;
+        screenMsg.event = EXT_EVENT_END_ROAST;
         screenMsg.data = NULL;
     }
     else
@@ -154,7 +154,7 @@ static void pidLoopCallback(void *args)
         chartUpdateData.elapsedSecs = US_TO_SECONDS(nowUs - ctx->startingProcessUs);
         chartUpdateData.currentTemp = currTemp;
     
-        screenMsg.event = SCR_EVENT_UPDATE_CHART;
+        screenMsg.event = EXT_EVENT_UPDATE_CHART;
         screenMsg.data = &chartUpdateData;
     }
 

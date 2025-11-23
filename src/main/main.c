@@ -32,7 +32,9 @@
  * LOCAL FUNCTION DECLARATIONS
  ******************************************************************************/
 
+#if BUTTON_DEBUG
 static void mainTask(void *arg);
+#endif
 
 /*******************************************************************************
  * LOCAL VARIABLES
@@ -40,6 +42,7 @@ static void mainTask(void *arg);
 
 QueueHandle_t OS_mainTaskQueue = NULL;
 QueueHandle_t OS_btnHndlrsTaskQueue = NULL;
+QueueHandle_t OS_bleEventQueue = NULL;
 
 static const char *TAG = "MAIN";
 
@@ -49,22 +52,17 @@ static const char *TAG = "MAIN";
 
 void app_main(void)
 {
-    OS_mainTaskQueue = xQueueCreate(32, sizeof(EN_buttons));
-    configASSERT(OS_mainTaskQueue != NULL);
-    OS_btnHndlrsTaskQueue = xQueueCreate(32, sizeof(ST_screenMsg));
+    OS_btnHndlrsTaskQueue = xQueueCreate(32, sizeof(ST_extEventMsg));
     configASSERT(OS_btnHndlrsTaskQueue != NULL);
+    OS_bleEventQueue = xQueueCreate(16, sizeof(ST_bleMsg));
+    configASSERT(OS_bleEventQueue != NULL);
 
     spiConfig_configureSpiBus();
     display_lcdInit();
     display_uiInit();
     
-    // Pre-create all menu btnHndlrs
     display_createMainMenu();
-    
-    // Create select roast menu (labels will be updated when shown)
     display_createSelectRoastMenu();
-    
-    // Show start menu initially
     display_showMainMenu();
     
     btnHndlrs_btnHndlrsInit();
@@ -73,19 +71,21 @@ void app_main(void)
     triac_triacInit();
     pid_PIDInit();
     DCMotor_initDcMotors();
+    bluetooth_init();
 
-    xTaskCreatePinnedToCore(mainTask, "mainTask", 4096, NULL, configMAX_PRIORITIES - 2, NULL, 1);
-    xTaskCreatePinnedToCore(btnHndlrs_btnHndlrsTask, "btnHndlrsTask", 8192, NULL, configMAX_PRIORITIES - 3, NULL, 1);
+    xTaskCreatePinnedToCore(btnHndlrs_task, "btnHndlrsTask", 8192, NULL, configMAX_PRIORITIES - 2, NULL, 1);
+    xTaskCreatePinnedToCore(bluetooth_task, "bluetoothTask", 4096, NULL, configMAX_PRIORITIES - 3, NULL, 1);
+    
+#if BUTTON_DEBUG
+    OS_mainTaskQueue = xQueueCreate(32, sizeof(EN_buttons));
+    configASSERT(OS_mainTaskQueue != NULL);
+    xTaskCreatePinnedToCore(mainTask, "mainTask", 4096, NULL, configMAX_PRIORITIES - 1, NULL, 1);
+#endif
 }
 
+#if BUTTON_DEBUG
 static void mainTask(void *arg)
 {
-    ST_motorControlContext *motorCtrlCtx = DCMotor_getContextFromMotor(TB_BOARD_1);
-
-    ESP_LOGI(TAG, "Enable motor forward");
-    tb6612_setSpeed(&motorCtrlCtx->motor, MOTOR_A, 0);
-    tb6612_setSpeed(&motorCtrlCtx->motor, MOTOR_B, 0);
-
     float temp = 0.0f;
     float pwm = 0.0f;
     float brightness = 80.0f;
@@ -96,26 +96,9 @@ static void mainTask(void *arg)
         {
             switch (msg)
             {
-                case BTN_1_PRESSED:
-                    ESP_LOGI(TAG, "Button 1 pressed");
-                    btnHndlrs_onBtnPress(BTN_1_PRESSED);
-                break;
-                case BTN_2_PRESSED:
-                    ESP_LOGI(TAG, "Button 2 pressed");
-                    btnHndlrs_onBtnPress(BTN_2_PRESSED);
-                break;
-                case BTN_3_PRESSED:
-                    ESP_LOGI(TAG, "Button 3 pressed");
-                    btnHndlrs_onBtnPress(BTN_3_PRESSED);
-                break;
-                case BTN_4_PRESSED:
-                    ESP_LOGI(TAG, "Button 4 pressed");
-                    btnHndlrs_onBtnPress(BTN_4_PRESSED);
-                break;
                 default:
                     ESP_LOGW(TAG, "Unknown button press: %d", msg);
                 break;
-#if BUTTON_DEBUG
             case BTN_1_PRESSED:
                 ESP_LOGI(TAG, "Button 1 pressed");
                 float currTemp = tempSens_getTemperature();
@@ -147,7 +130,6 @@ static void mainTask(void *arg)
             default:
                 ESP_LOGW(TAG, "Unknown button press: %d", msg);
                 break;
-#endif
             }
         }
         else
@@ -163,3 +145,4 @@ static void mainTask(void *arg)
 #endif
     }
 }
+#endif

@@ -25,7 +25,6 @@ static bool isConnected = false;
 static uint16_t connHandle = 0;
 static uint8_t receivedData[BLE_MAX_DATA_LEN];
 static uint16_t receivedDataLen = 0;
-static QueueHandle_t bleEventQueue = NULL;
 
 // GATT service definition
 static const ble_uuid128_t gatt_svr_svc_uuid =
@@ -57,11 +56,37 @@ static const struct ble_gatt_svc_def gatt_svr_svcs[] = {
  * EXTERNAL FUNCTIONS
  ******************************************************************************/
 
-extern void bluetooth_init(QueueHandle_t eventQueue)
+extern void bluetooth_task(void *arg)
+{
+    ST_bleMsg msg = {0};
+
+    while (1)
+    {
+        if (xQueueReceive(OS_bleEventQueue, &msg, portMAX_DELAY) == pdTRUE)
+        {
+            switch (msg.event)
+            {
+                case BLE_EVENT_CONNECTED:
+                    ESP_LOGI(TAG, "Device connected");
+                break;
+                case BLE_EVENT_DISCONNECTED:
+                    ESP_LOGI(TAG, "Device disconnected");
+                break;
+                case BLE_EVENT_DATA_RECEIVED:
+                    ESP_LOGI(TAG, "Data received over BLE, length: %d bytes", msg.dataLen);
+                break;
+                default:
+                    ESP_LOGW(TAG, "Unknown BLE event: %d", msg.event);
+                break;
+            }
+        }
+    }
+    
+}
+
+extern void bluetooth_init(void)
 {
     ESP_LOGI(TAG, "Initializing NimBLE");
-    
-    bleEventQueue = eventQueue;
     
     // Initialize NVS for bonding
     esp_err_t ret = nvs_flash_init();
@@ -184,9 +209,9 @@ static int bluetooth_gapEvent(struct ble_gap_event *event, void *arg)
                 connHandle = event->connect.conn_handle;
                 
                 // Send connected event to queue
-                if (bleEventQueue != NULL) {
+                if (OS_bleEventQueue != NULL) {
                     ST_bleMsg msg = {.event = BLE_EVENT_CONNECTED, .dataLen = 0};
-                    xQueueSend(bleEventQueue, &msg, 0);
+                    xQueueSend(OS_bleEventQueue, &msg, 0);
                 }
             } else {
                 // Connection failed, resume advertising
@@ -200,9 +225,9 @@ static int bluetooth_gapEvent(struct ble_gap_event *event, void *arg)
             connHandle = 0;
             
             // Send disconnected event to queue
-            if (bleEventQueue != NULL) {
+            if (OS_bleEventQueue != NULL) {
                 ST_bleMsg msg = {.event = BLE_EVENT_DISCONNECTED, .dataLen = 0};
-                xQueueSend(bleEventQueue, &msg, 0);
+                xQueueSend(OS_bleEventQueue, &msg, 0);
             }
             
             // Resume advertising after disconnect
@@ -269,9 +294,9 @@ static int bluetooth_gattCharAccessCb(uint16_t conn_handle, uint16_t attr_handle
             ESP_LOGI(TAG, "JSON data stored: %d bytes", receivedDataLen);
             
             // Send data received event to queue
-            if (bleEventQueue != NULL) {
+            if (OS_bleEventQueue != NULL) {
                 ST_bleMsg msg = {.event = BLE_EVENT_DATA_RECEIVED, .dataLen = receivedDataLen};
-                xQueueSend(bleEventQueue, &msg, 0);
+                xQueueSend(OS_bleEventQueue, &msg, 0);
             }
             
             return 0;

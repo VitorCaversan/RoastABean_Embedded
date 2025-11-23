@@ -15,23 +15,39 @@
  * TYPEDEFS AND STRUCTURES
  ******************************************************************************/
 
-typedef enum EN_screenEvents
+typedef enum EN_extEvents
 {
-    SCR_EVENT_NONE = 0,
-    SCR_EVENT_UPDATE_CHART,
-    SCR_EVENT_END_ROAST,
+    EXT_EVENT_NONE = 0,
+    EXT_EVENT_UPDATE_CHART,
+    EXT_EVENT_END_ROAST,
+    EXT_EVENT_BTN_1_PRESSED,
+    EXT_EVENT_BTN_2_PRESSED,
+    EXT_EVENT_BTN_3_PRESSED,
+    EXT_EVENT_BTN_4_PRESSED,
     
-    SCR_EVENT_QTY // Must be the last element
-} EN_screenEvents;
+    EXT_EVENT_QTY // Must be the last element
+} EN_extEvents;
 
-typedef struct ST_screenMsg
+typedef struct ST_extEventMsg
 {
-    EN_screenEvents event;
+    EN_extEvents event;
     void *data;
-} ST_screenMsg;
+} ST_extEventMsg;
+
+typedef enum {
+    BLE_EVENT_CONNECTED = 0,
+    BLE_EVENT_DISCONNECTED,
+    BLE_EVENT_DATA_RECEIVED
+} EN_bleEvent;
+
+typedef struct {
+    EN_bleEvent event;
+    uint16_t dataLen;  // For DATA_RECEIVED event
+} ST_bleMsg;
 
 extern QueueHandle_t OS_mainTaskQueue;
 extern QueueHandle_t OS_btnHndlrsTaskQueue;
+extern QueueHandle_t OS_bleEventQueue;
 
 /*******************************************************************************
  * EXTERNAL FUNCTION DECLARATIONS

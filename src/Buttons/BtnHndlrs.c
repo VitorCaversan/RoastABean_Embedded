@@ -12,6 +12,13 @@
  ******************************************************************************/
 
 /**
+ * @brief Calls respective button press handler based on button pressed
+ * 
+ * @param button The button that was pressed
+ */
+static void onBtnPress(EN_buttons button);
+
+/**
  * @brief Update the roast chart with new data.
  *
  * @param data Pointer to the chart update data.
@@ -99,9 +106,9 @@ static ST_storedChart storedCharts[MAX_CHARTS_TO_SHOW] = {0};
  * EXTERNAL FUNCTIONS
  ******************************************************************************/
 
-extern void btnHndlrs_btnHndlrsTask(void *arg)
+extern void btnHndlrs_task(void *arg)
 {
-    ST_screenMsg msg;
+    ST_extEventMsg msg;
 
     while (1)
     {
@@ -109,13 +116,29 @@ extern void btnHndlrs_btnHndlrsTask(void *arg)
         {
             switch (msg.event)
             {
-                case SCR_EVENT_UPDATE_CHART:
+                case EXT_EVENT_UPDATE_CHART:
                     ESP_LOGI(TAG, "Update chart");
                     updateChart((ST_chartUpdateData *)msg.data);
                 break;
-                case SCR_EVENT_END_ROAST:
+                case EXT_EVENT_END_ROAST:
                     ESP_LOGI(TAG, "Update chart");
                     endRoast();
+                break;
+                case EXT_EVENT_BTN_1_PRESSED:
+                    ESP_LOGI(TAG, "Button 1 pressed");
+                    onBtnPress(BTN_1_PRESSED);
+                break;
+                case EXT_EVENT_BTN_2_PRESSED:
+                    ESP_LOGI(TAG, "Button 2 pressed");
+                    onBtnPress(BTN_2_PRESSED);
+                break;
+                case EXT_EVENT_BTN_3_PRESSED:
+                    ESP_LOGI(TAG, "Button 3 pressed");
+                    onBtnPress(BTN_3_PRESSED);
+                break;
+                case EXT_EVENT_BTN_4_PRESSED:
+                    ESP_LOGI(TAG, "Button 4 pressed");
+                    onBtnPress(BTN_4_PRESSED);
                 break;
                 default:
                     ESP_LOGW(TAG, "Unknown screen event: %d", msg.event);
@@ -130,7 +153,11 @@ extern void btnHndlrs_btnHndlrsInit(void)
     setBtnsCallbacks(NULL, moveSelectionUpMainMenu, moveSelectionDownMainMenu, onSelectMainMenu);
 }
 
-extern void btnHndlrs_onBtnPress(EN_buttons button)
+/*******************************************************************************
+ * LOCAL FUNCTIONS
+ ******************************************************************************/
+
+static void onBtnPress(EN_buttons button)
 {
     switch (button)
     {
@@ -152,10 +179,6 @@ extern void btnHndlrs_onBtnPress(EN_buttons button)
         break;
     }
 }
-
-/*******************************************************************************
- * LOCAL FUNCTIONS
- ******************************************************************************/
 
 static void updateChart(const ST_chartUpdateData *data)
 {

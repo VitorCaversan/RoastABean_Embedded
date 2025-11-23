@@ -17,6 +17,8 @@
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
 
+#include "OSConfig.h"
+
 /*******************************************************************************
  * MACROS AND DEFINES
  ******************************************************************************/
@@ -32,27 +34,19 @@
  * TYPEDEFS AND STRUCTURES
  ******************************************************************************/
 
-typedef enum {
-    BLE_EVENT_CONNECTED = 0,
-    BLE_EVENT_DISCONNECTED,
-    BLE_EVENT_DATA_RECEIVED
-} EN_bleEvent;
-
-typedef struct {
-    EN_bleEvent event;
-    uint16_t dataLen;  // For DATA_RECEIVED event
-} ST_bleMsg;
-
 /*******************************************************************************
  * EXTERNAL FUNCTION DECLARATIONS
  ******************************************************************************/
 
 /**
- * @brief Initialize Bluetooth (NimBLE stack)
- * 
- * @param eventQueue Queue handle where BLE events will be posted (can be NULL if not needed)
+ * @brief Bluetooth task to handle BLE events
  */
-extern void bluetooth_init(QueueHandle_t eventQueue);
+extern void bluetooth_task(void *arg);
+
+/**
+ * @brief Initialize Bluetooth (NimBLE stack)
+ */
+extern void bluetooth_init(void);
 
 /**
  * @brief Start BLE advertising

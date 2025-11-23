@@ -43,18 +43,11 @@ typedef struct ST_btnsFunc
 /**
  * @brief Task to handle btnHndlrs
  */
-extern void btnHndlrs_btnHndlrsTask(void *arg);
+extern void btnHndlrs_task(void *arg);
 
 /**
  * @brief Initialize the btnHndlrs module by setting up button callbacks
  */
 extern void btnHndlrs_btnHndlrsInit(void);
-
-/**
- * @brief Calls respective button press handler based on button pressed
- * 
- * @param button The button that was pressed
- */
-extern void btnHndlrs_onBtnPress(EN_buttons button);
 
 #endif // SCREENS_H
