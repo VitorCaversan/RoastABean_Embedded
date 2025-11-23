@@ -19,6 +19,7 @@
 #include "PIDControl.h"
 #include "BtnHndlrs.h"
 #include "Bluetooth.h"
+#include "NVShndlr.h"
 
 /*******************************************************************************
  * MACROS AND DEFINES
@@ -71,6 +72,7 @@ void app_main(void)
     triac_triacInit();
     pid_PIDInit();
     DCMotor_initDcMotors();
+    nvs_init();
     bluetooth_init();
 
     xTaskCreatePinnedToCore(btnHndlrs_task, "btnHndlrsTask", 8192, NULL, configMAX_PRIORITIES - 2, NULL, 1);
