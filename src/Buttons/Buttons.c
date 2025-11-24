@@ -72,8 +72,16 @@ static void IRAM_ATTR btnIsrHndlr(void *arg)
     
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
+#if BUTTON_DEBUG
+    if (pressedBtnIdx < BTN_QTY)
+    {
+        EN_buttons btnEvent = (EN_buttons)pressedBtnIdx;
+        xQueueSendFromISR(OS_mainTaskQueue, &btnEvent, &xHigherPriorityTaskWoken);
+    }
+#else
     // Best effort enqueue; if queue is full, drop or handle later.
     xQueueSendFromISR(OS_btnHndlrsTaskQueue, &msg, &xHigherPriorityTaskWoken);
+#endif
 
     if (xHigherPriorityTaskWoken)
     {

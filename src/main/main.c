@@ -61,7 +61,8 @@ void app_main(void)
     
     // Initialize BLE first (PHY callbacks will manage SPI bus suspension/restoration)
     vTaskDelay(pdMS_TO_TICKS(100));
-    bluetooth_init();
+    // bluetooth_init();
+    vTaskDelay(pdMS_TO_TICKS(100));
     
     // Initialize SPI peripherals after BLE (SPI bus is now safe to use)
     spiConfig_configureSpiBus();

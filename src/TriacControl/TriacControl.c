@@ -36,7 +36,23 @@ extern void triac_triacInit(void)
 {
     triacDimmer = createDimmer(TRIAC_GPIO, ZERO_CROSS_GPIO);
 
-    begin(triacDimmer, NORMAL_MODE, ON, 60);
+    begin(triacDimmer, NORMAL_MODE, OFF, 60);
+
+    triac_setPwrPercent(10.0f);
+}
+
+extern void triac_setState(bool onOff)
+{
+    if (onOff)
+    {
+        ESP_LOGI(TAG, "Set triac state to ON");
+        setState(triacDimmer, ON);
+    }
+    else
+    {
+        ESP_LOGI(TAG, "Set triac state to OFF");
+        setState(triacDimmer, OFF);
+    }
 }
 
 extern void triac_setPwrPercent(float pwr)

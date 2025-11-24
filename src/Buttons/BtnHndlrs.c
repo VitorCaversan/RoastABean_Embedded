@@ -71,6 +71,14 @@ static void onConfirmStartRoast(void);
 static void onCancelStartRoast(void);
 static void onBackFromSelectRoast(void);
 
+/**
+ * @defgroup EndRoastButtons End roast button handlers
+ * @brief Handlers for confirming or cancelling the end of a roast.
+ * 
+ * Functions: onBackFromRoast(),
+ * onConfirmEndRoast(),
+ * onCancelEndRoast().
+ */
 static void onBackFromRoast(void);
 static void onConfirmEndRoast(void);
 static void onCancelEndRoast(void);
@@ -121,7 +129,7 @@ extern void btnHndlrs_task(void *arg)
                     updateChart((ST_chartUpdateData *)msg.data);
                 break;
                 case EXT_EVENT_END_ROAST:
-                    ESP_LOGI(TAG, "Update chart");
+                    ESP_LOGI(TAG, "Roast ended");
                     endRoast();
                 break;
                 case EXT_EVENT_BTN_1_PRESSED:
@@ -183,6 +191,17 @@ static void onBtnPress(EN_buttons button)
 static void updateChart(const ST_chartUpdateData *data)
 {
     display_updateRoastChart(data->currTargetTemp, data->elapsedSecs, data->currentTemp);
+
+    ST_VerticalMenuUi *ui = display_getSelectRoastMenuUi();
+    ST_storedChart *selectedChart = &storedCharts[ui->selectedIndex];
+
+    uint32_t minuteIdx = data->elapsedSecs / 60;
+    if (minuteIdx >= selectedChart->totalMins) minuteIdx = selectedChart->totalMins - 1;
+
+    if ((data->elapsedSecs % 60 == 0) && (isfinite(data->currentTemp)))
+    {
+        selectedChart->achievedProfile[minuteIdx] = data->currentTemp;
+    }
 }
 
 static void setBtnsCallbacks(void (*onBtn1Pressed)(void),
@@ -277,6 +296,7 @@ static void setSelectRoastMenu(void)
             // - End: ~215°C for medium roast
             
             float profile[] = {
+                0.0f,
                 180.0f,  // 0 min - Starting temperature after preheat
                 175.0f,  // 1 min - Initial drying phase
                 170.0f,  // 2 min - Continued drying
@@ -449,6 +469,9 @@ static void onConfirmEndRoast(void)
 
     pid_ctrlLoopStop();
 
+    ST_motorControlContext *motorCtrlCtx = DCMotor_getContextFromMotor(TB_BOARD_1);
+    tb6612_setSpeed(&motorCtrlCtx->motor, MOTOR_A, 0);
+
     setBtnsCallbacks(NULL,
                      moveSelectionUpMainMenu,
                      moveSelectionDownMainMenu,
@@ -472,17 +495,32 @@ static void endRoast(void)
 
     ST_motorControlContext *motorCtrlCtx = DCMotor_getContextFromMotor(TB_BOARD_2);
 
-    tb6612_setSpeed(&motorCtrlCtx->motor, MOTOR_B, 100);
+    tb6612_setSpeed(&motorCtrlCtx->motor, MOTOR_A, 100);
 
     vTaskDelay(pdMS_TO_TICKS(500));
 
-    tb6612_setSpeed(&motorCtrlCtx->motor, MOTOR_B, 0);
+    tb6612_setSpeed(&motorCtrlCtx->motor, MOTOR_A, 0);
 
     vTaskDelay(pdMS_TO_TICKS(5000));
 
     motorCtrlCtx = DCMotor_getContextFromMotor(TB_BOARD_1);
 
     tb6612_setSpeed(&motorCtrlCtx->motor, MOTOR_A, 0);
+
+    ST_VerticalMenuUi *ui = display_getSelectRoastMenuUi();
+    ST_storedChart *selectedChart = &storedCharts[ui->selectedIndex];
+
+    printf("Target roast profile for %s:\n", selectedChart->chartName);
+    uint32_t i;
+    for (i = 0; i < selectedChart->totalMins; i++)
+    {
+        printf("%.2f\n", selectedChart->tempProfile[i]);
+    }
+    printf("Roast profile achieved\n");
+    for (i = 0; i < selectedChart->totalMins; i++)
+    {
+        printf("%.2f\n", selectedChart->achievedProfile[i]);
+    }
 
     setBtnsCallbacks(NULL,
                      moveSelectionUpMainMenu,

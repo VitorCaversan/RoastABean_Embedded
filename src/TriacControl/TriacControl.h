@@ -27,6 +27,13 @@
 extern void triac_triacInit(void);
 
 /**
+ * @brief Sets the triac ON or OFF
+ * 
+ * @param onOff true = ON, false = OFF
+ */
+extern void triac_setState(bool onOff);
+
+/**
  * @brief Sets the duty cycle
  * 
  * @param pwm From 0 to 100

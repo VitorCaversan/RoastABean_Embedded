@@ -107,6 +107,7 @@ typedef struct ST_storedChart
 {
     char chartName[MAX_CHART_NAMESIZE];
     float tempProfile[MAX_ROAST_TIME_IN_MIN];
+    float achievedProfile[MAX_ROAST_TIME_IN_MIN];
     uint32_t totalMins;
 } ST_storedChart;
 

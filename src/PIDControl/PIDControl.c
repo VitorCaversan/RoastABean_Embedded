@@ -73,7 +73,7 @@ extern void pid_PIDInit(void)
         .ki = 0.4,
         .kd = 0.0,
         .max_output   = 75.0,
-        .min_output   = 17.0,
+        .min_output   = 5.0,
         .max_integral = 100.0, // Anti-windup: 80% -> +-40/0.4 ~= +-100
         .min_integral = -100.0,
         .cal_type = PID_CAL_TYPE_POSITIONAL,
@@ -99,6 +99,11 @@ extern void pid_ctrlLoopStart(float *tempProfile, uint32_t minsToControl)
     pidLoopTimer = NULL;
     ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &pidLoopTimer));
 
+    ESP_LOGI(TAG, "Set triac to ON state");
+    triac_setState(true);
+
+    vTaskDelay(pdMS_TO_TICKS(1000));
+
     ESP_LOGI(TAG, "Start PID control loop");
     ESP_ERROR_CHECK(esp_timer_start_periodic(pidLoopTimer, BDC_PID_LOOP_PERIOD_US));
 }
@@ -109,6 +114,9 @@ extern void pid_ctrlLoopStop(void)
     esp_timer_stop(pidLoopTimer);
     esp_timer_delete(pidLoopTimer);
     pidLoopTimer = NULL;
+
+    ESP_LOGI(TAG, "Set triac to OFF state");
+    triac_setState(false);
 }
 
 /*******************************************************************************
