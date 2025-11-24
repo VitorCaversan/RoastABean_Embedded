@@ -40,6 +40,16 @@ extern void spiConfig_configureSpiBus(void)
     ESP_LOGI(TAG, "Created SPI bus");
 }
 
+extern void spiConfig_freeSpiBus(void)
+{
+    esp_err_t ret = spi_bus_free(DEFAULT_SPI_HOST);
+    if (ret == ESP_OK) {
+        ESP_LOGI(TAG, "SPI bus freed");
+    } else {
+        ESP_LOGW(TAG, "Failed to free SPI bus: %s", esp_err_to_name(ret));
+    }
+}
+
 /*******************************************************************************
  * LOCAL FUNCTIONS
  ******************************************************************************/

@@ -2,6 +2,7 @@
  * INCLUDES
  ******************************************************************************/
 #include "Bluetooth.h"
+#include "SpiConfig.h"
 
 /*******************************************************************************
  * MACROS AND DEFINES
@@ -99,11 +100,20 @@ extern void bluetooth_task(void *arg)
 extern void bluetooth_init(void)
 {
     ESP_LOGI(TAG, "Initializing NimBLE");
+    ESP_LOGI(TAG, "Free heap before BLE init: %lu bytes", esp_get_free_heap_size());
     
     // NVS already initialized by nvs_init() in main
     
+    // Free SPI bus before BLE init to avoid cache conflicts during PHY calibration
+    spiConfig_freeSpiBus();
+
     // Initialize NimBLE
-    ESP_ERROR_CHECK(nimble_port_init());
+    esp_err_t ret = nimble_port_init();
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "nimble_port_init() failed: %s", esp_err_to_name(ret));
+        return;
+    }
+    ESP_LOGI(TAG, "NimBLE port initialized, free heap: %lu bytes", esp_get_free_heap_size());
     
     // Initialize the NimBLE host configuration
     ble_hs_cfg.sync_cb = onSync;
@@ -233,6 +243,9 @@ extern int bluetooth_sendData(const uint8_t *data, uint16_t dataLen)
 static void onSync(void)
 {
     ESP_LOGI(TAG, "BLE Host synchronized");
+    
+    // Start advertising when host is ready
+    bluetooth_startAdvertising();
 }
 
 static void onReset(int reason)

@@ -1,3 +1,3 @@
 idf_component_register(SRCS "Bluetooth.c"
                        INCLUDE_DIRS "."
-                       REQUIRES "nvs_flash" "bt" "OSConfig")
+                       REQUIRES "nvs_flash" "bt" "OSConfig" "SPI")

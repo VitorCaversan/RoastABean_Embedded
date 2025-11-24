@@ -31,4 +31,9 @@
  */
 extern void spiConfig_configureSpiBus(void);
 
+/**
+ * @brief Free the SPI bus when not in use (e.g., before BLE initialization)
+ */
+extern void spiConfig_freeSpiBus(void);
+
 #endif // SPI_CONFIG_H

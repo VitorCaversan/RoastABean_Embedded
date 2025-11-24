@@ -27,7 +27,6 @@
 
 // Enable this config,  we will print debug formated string, which in return can be captured and parsed by Serial-Studio
 #define SERIAL_STUDIO_DEBUG           CONFIG_SERIAL_STUDIO_DEBUG
-#define BUTTON_DEBUG                 0
 
 /*******************************************************************************
  * LOCAL FUNCTION DECLARATIONS
@@ -58,30 +57,35 @@ void app_main(void)
     OS_bleEventQueue = xQueueCreate(16, sizeof(ST_bleMsg));
     configASSERT(OS_bleEventQueue != NULL);
 
+    nvs_init();
+    
+    // Initialize BLE first (PHY callbacks will manage SPI bus suspension/restoration)
+    vTaskDelay(pdMS_TO_TICKS(100));
+    bluetooth_init();
+    
+    // Initialize SPI peripherals after BLE (SPI bus is now safe to use)
     spiConfig_configureSpiBus();
     display_lcdInit();
     display_uiInit();
-    
     display_createMainMenu();
     display_createSelectRoastMenu();
     display_showMainMenu();
-    
-    btnHndlrs_btnHndlrsInit();
     tempSens_init();
+    
+    // Initialize remaining peripherals
+    btnHndlrs_btnHndlrsInit();
     btn_configButtons();
     triac_triacInit();
     pid_PIDInit();
     DCMotor_initDcMotors();
-    nvs_init();
-    bluetooth_init();
 
-    xTaskCreatePinnedToCore(btnHndlrs_task, "btnHndlrsTask", 8192, NULL, configMAX_PRIORITIES - 2, NULL, 1);
-    xTaskCreatePinnedToCore(bluetooth_task, "bluetoothTask", 4096, NULL, configMAX_PRIORITIES - 3, NULL, 1);
-    
 #if BUTTON_DEBUG
     OS_mainTaskQueue = xQueueCreate(32, sizeof(EN_buttons));
     configASSERT(OS_mainTaskQueue != NULL);
     xTaskCreatePinnedToCore(mainTask, "mainTask", 4096, NULL, configMAX_PRIORITIES - 1, NULL, 1);
+#else
+    xTaskCreatePinnedToCore(btnHndlrs_task, "btnHndlrsTask", 8192, NULL, configMAX_PRIORITIES - 2, NULL, 1);
+    xTaskCreatePinnedToCore(bluetooth_task, "bluetoothTask", 4096, NULL, configMAX_PRIORITIES - 3, NULL, 1);
 #endif
 }
 
@@ -98,9 +102,6 @@ static void mainTask(void *arg)
         {
             switch (msg)
             {
-                default:
-                    ESP_LOGW(TAG, "Unknown button press: %d", msg);
-                break;
             case BTN_1_PRESSED:
                 ESP_LOGI(TAG, "Button 1 pressed");
                 float currTemp = tempSens_getTemperature();
