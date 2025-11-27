@@ -186,7 +186,7 @@ extern void DCMotor_rampSpeedUp(EN_TbBoard tbBoard,
     {
         tb6612_setSpeed(&motorCtx->motor, motorId, startingPercent);
     
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(200));
     }
 
     tb6612_setSpeed(&motorCtx->motor, motorId, targetPercent);

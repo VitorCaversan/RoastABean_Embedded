@@ -12,7 +12,7 @@
 #define BTN_3_GPIO_PIN        44
 #define BTN_4_GPIO_PIN        43
 
-#define DEBOUNCE_INTERVAL_US  100000 // 100ms
+#define DEBOUNCE_INTERVAL_US  200000 // 200ms
 
 /*******************************************************************************
  * LOCAL FUNCTION DECLARATIONS

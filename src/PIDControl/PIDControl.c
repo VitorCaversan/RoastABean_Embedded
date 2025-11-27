@@ -73,7 +73,7 @@ extern void pid_PIDInit(void)
         .ki = 0.4,
         .kd = 0.0,
         .max_output   = 75.0,
-        .min_output   = 5.0,
+        .min_output   = 15.0,
         .max_integral = 100.0, // Anti-windup: 80% -> +-40/0.4 ~= +-100
         .min_integral = -100.0,
         .cal_type = PID_CAL_TYPE_POSITIONAL,
