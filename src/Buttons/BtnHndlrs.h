@@ -18,6 +18,8 @@
 #include "PIDControl.h"
 #include "DCMotor.h"
 #include "Bluetooth.h"
+#include "NVShndlr.h"
+#include "JsonHndlr.h"
 
 /*******************************************************************************
  * MACROS AND DEFINES

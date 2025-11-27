@@ -19,7 +19,6 @@
 #include <string.h>
 #include "esp_err.h"
 #include "nvs_flash.h"
-#include "NVShndlr.h"
 #include "esp_log.h"
 
 /*******************************************************************************
@@ -28,9 +27,23 @@
 #define NVS_MAX_KEY_LENGTH      15
 #define NVS_MAX_PROFILE_SIZE    2048
 
+#define MAX_CHART_NAMESIZE    64
+#define MAX_ROAST_TIME_IN_MIN       200
+
 /*******************************************************************************
  * TYPEDEFS AND STRUCTURES
  ******************************************************************************/
+
+typedef struct ST_storedChart
+{
+    char chartName[MAX_CHART_NAMESIZE];
+    float tempProfile[MAX_ROAST_TIME_IN_MIN];
+    float achievedProfile[MAX_ROAST_TIME_IN_MIN];
+    uint32_t totalMins;
+    bool isScheduled;
+    char scheduledTime[32];  // ISO 8601 format: "2025-11-24T21:31:00.000Z"
+    char currentTime[32];    // ISO 8601 format: "2025-11-23T21:30:00.496Z"
+} ST_storedChart;
 
 /*******************************************************************************
  * EXTERNAL FUNCTION DECLARATIONS
@@ -51,7 +64,7 @@ extern esp_err_t nvs_init(void);
  * @param dataLen Length of data in bytes
  * @return ESP_OK on success, error code otherwise
  */
-extern esp_err_t nvs_saveRoastProfile(uint8_t profileId, const uint8_t *data, size_t dataLen);
+extern esp_err_t nvs_saveRoastProfile(uint8_t profileId, const char *data, size_t dataLen);
 
 /**
  * @brief Load roast profile from NVS
@@ -62,7 +75,7 @@ extern esp_err_t nvs_saveRoastProfile(uint8_t profileId, const uint8_t *data, si
  * @param outLen Pointer to store actual data length read
  * @return ESP_OK on success, ESP_ERR_NVS_NOT_FOUND if profile doesn't exist, error code otherwise
  */
-extern esp_err_t nvs_loadRoastProfile(uint8_t profileId, uint8_t *data, size_t maxLen, size_t *outLen);
+extern esp_err_t nvs_loadRoastProfile(uint8_t profileId, char *data, size_t maxLen, size_t *outLen);
 
 /**
  * @brief Delete roast profile from NVS

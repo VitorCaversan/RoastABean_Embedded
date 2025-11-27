@@ -62,7 +62,7 @@ extern esp_err_t nvs_init(void)
     return ESP_OK;
 }
 
-extern esp_err_t nvs_saveRoastProfile(uint8_t profileId, const uint8_t *data, size_t dataLen)
+extern esp_err_t nvs_saveRoastProfile(uint8_t profileId, const char *data, size_t dataLen)
 {
     if (data == NULL || dataLen == 0 || dataLen > NVS_MAX_PROFILE_SIZE)
     {
@@ -111,7 +111,7 @@ extern esp_err_t nvs_saveRoastProfile(uint8_t profileId, const uint8_t *data, si
     return ESP_OK;
 }
 
-extern esp_err_t nvs_loadRoastProfile(uint8_t profileId, uint8_t *data, size_t maxLen, size_t *outLen)
+extern esp_err_t nvs_loadRoastProfile(uint8_t profileId, char *data, size_t maxLen, size_t *outLen)
 {
     if (data == NULL || maxLen == 0)
     {

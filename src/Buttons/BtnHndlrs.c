@@ -351,6 +351,22 @@ static void setSelectRoastMenu(void)
         }
     }
 
+    char *buffer = calloc(2056, sizeof(char));
+    if (buffer == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to allocate memory for JSON buffer");
+        return;
+    }
+
+    size_t outLen = 0;
+    for (i = 0; i < MAX_CHARTS_TO_SHOW; i++)
+    {
+        nvs_loadRoastProfile(i, buffer, 2056, &outLen);
+        json_parseToStoredChart(buffer, &storedCharts[i]);
+    }
+    
+    free(buffer);
+
     setBtnsCallbacks(onBackFromSelectRoast,
                      moveSelectionUpSelectRoastMenu,
                      moveSelectionDownSelectRoastMenu,

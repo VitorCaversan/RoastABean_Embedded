@@ -20,6 +20,7 @@
 
 #include "SpiConfig.h"
 #include "Buttons.h"
+#include "NVShndlr.h"
 
 /*******************************************************************************
  * MACROS AND DEFINES
@@ -34,11 +35,7 @@
 #define LCD_V_RES_IN_PIX    240
 #endif
 
-#define MAX_ROAST_TIME_IN_MIN       200
-
 #define MAX_VERTICAL_MENU_OPTION_COUNT    10
-
-#define MAX_CHART_NAMESIZE    64
 
 #define MAIN_MENU_OPTION_COUNT      3
 #define SELECT_ROAST_MENU_OPTION_COUNT    3
@@ -102,14 +99,6 @@ typedef struct ST_PopupUi
     lv_style_t styleContainer;
     lv_style_t styleBottomBar;
 } ST_PopupUi;
-
-typedef struct ST_storedChart
-{
-    char chartName[MAX_CHART_NAMESIZE];
-    float tempProfile[MAX_ROAST_TIME_IN_MIN];
-    float achievedProfile[MAX_ROAST_TIME_IN_MIN];
-    uint32_t totalMins;
-} ST_storedChart;
 
 /*******************************************************************************
  * EXTERNAL FUNCTION DECLARATIONS
