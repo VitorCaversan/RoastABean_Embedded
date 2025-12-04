@@ -105,17 +105,18 @@ static void mainTask(void *arg)
             {
             case BTN_1_PRESSED:
                 ESP_LOGI(TAG, "Button 1 pressed");
-                float currTemp = tempSens_getTemperature();
-                float *tempProfile = calloc((MAX_ROAST_TIME_IN_MIN / 4), sizeof(float));
-                for (uint32_t i = 0; i < (MAX_ROAST_TIME_IN_MIN / 4); i++)
-                {
-                    tempProfile[i] = currTemp + random() % 20;
-                }
+                // float currTemp = tempSens_getTemperature();
+                // float *tempProfile = calloc((MAX_ROAST_TIME_IN_MIN / 4), sizeof(float));
+                // for (uint32_t i = 0; i < (MAX_ROAST_TIME_IN_MIN / 4); i++)
+                // {
+                //     tempProfile[i] = currTemp + random() % 20;
+                // }
 
-                display_createRoastChart(tempProfile, (MAX_ROAST_TIME_IN_MIN / 4), NAN, NAN);
-                display_showRoastChart();
-                pid_ctrlLoopStart(tempProfile, (MAX_ROAST_TIME_IN_MIN / 4));
-                free(tempProfile);
+                // display_createRoastChart(tempProfile, (MAX_ROAST_TIME_IN_MIN / 4), NAN, NAN);
+                // display_showRoastChart();
+                // pid_ctrlLoopStart(tempProfile, (MAX_ROAST_TIME_IN_MIN / 4));
+                // free(tempProfile);
+                triac_setState(true);
                 break;
             case BTN_2_PRESSED:
                 ESP_LOGI(TAG, "Button 2 pressed");
@@ -125,7 +126,9 @@ static void mainTask(void *arg)
                 break;
             case BTN_3_PRESSED:
                 ESP_LOGI(TAG, "Button 3 pressed");
-                triac_setPwrPercent(50.0f);
+                ESP_LOGI(TAG, "Current pwm %.2f%%", pwm);
+                triac_setPwrPercent(pwm);
+                (pwm >= 1.0) ? (pwm -= 1.0f) : (pwm = 0.0f);
                 break;
             case BTN_4_PRESSED:
                 ESP_LOGI(TAG, "Button 4 pressed");
