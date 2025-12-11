@@ -40,6 +40,13 @@
 static void pid_loop_cb(void *args);
 #endif
 
+/**
+ * @brief Callback to turn off the fans after a timeout
+ * 
+ * @param arg
+ */
+static void turnFansOffCallback(void *arg);
+
 /*******************************************************************************
  * LOCAL VARIABLES
  ******************************************************************************/
@@ -192,6 +199,24 @@ extern void DCMotor_rampSpeedUp(EN_TbBoard tbBoard,
     tb6612_setSpeed(&motorCtx->motor, motorId, targetPercent);
 }
 
+extern void DCMotor_turnFansOnForSeconds(uint32_t seconds)
+{
+    ESP_LOGI(TAG, "Turning fans on for %u seconds", seconds);
+
+    ST_motorControlContext *motorCtx = DCMotor_getContextFromMotor(TB_BOARD_1);
+
+    tb6612_setSpeed(&motorCtx->motor, MOTOR_B, -100.0);
+
+    const esp_timer_create_args_t oneshotTimerArgs = {
+        .callback = turnFansOffCallback,
+        .arg = NULL,
+        .name = "turn_fans_off"
+    };
+    esp_timer_handle_t oneshotTimer = NULL;
+    ESP_ERROR_CHECK(esp_timer_create(&oneshotTimerArgs, &oneshotTimer));
+    ESP_ERROR_CHECK(esp_timer_start_once(oneshotTimer, seconds * 1000000));
+}
+
 /*******************************************************************************
  * LOCAL FUNCTIONS
  ******************************************************************************/
@@ -221,3 +246,11 @@ static void pid_loop_cb(void *args)
     bdc_motor_set_speed(motor, (uint32_t)new_speed);
 }
 #endif
+
+static void turnFansOffCallback(void *arg)
+{
+    ESP_LOGI(TAG, "Turning fans off after timeout");
+    ST_motorControlContext *motorCtx = DCMotor_getContextFromMotor(TB_BOARD_1);
+
+    tb6612_setSpeed(&motorCtx->motor, MOTOR_B, 0);
+}

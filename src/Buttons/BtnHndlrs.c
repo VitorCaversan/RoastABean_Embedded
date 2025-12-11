@@ -485,7 +485,14 @@ static void onConfirmEndRoast(void)
 
     pid_ctrlLoopStop();
 
+    DCMotor_turnFansOnForSeconds(120);
+
     ST_motorControlContext *motorCtrlCtx = DCMotor_getContextFromMotor(TB_BOARD_1);
+    tb6612_setSpeed(&motorCtrlCtx->motor, MOTOR_A, 0);
+
+    motorCtrlCtx = DCMotor_getContextFromMotor(TB_BOARD_2);
+    tb6612_setSpeed(&motorCtrlCtx->motor, MOTOR_A, 100);
+    vTaskDelay(pdMS_TO_TICKS(500));
     tb6612_setSpeed(&motorCtrlCtx->motor, MOTOR_A, 0);
 
     setBtnsCallbacks(NULL,
@@ -508,6 +515,8 @@ static void onCancelEndRoast(void)
 static void endRoast(void)
 {
     pid_ctrlLoopStop();
+
+    DCMotor_turnFansOnForSeconds(300);
 
     ST_motorControlContext *motorCtrlCtx = DCMotor_getContextFromMotor(TB_BOARD_2);
 

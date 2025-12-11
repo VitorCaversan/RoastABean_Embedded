@@ -84,4 +84,11 @@ extern void DCMotor_rampSpeedUp(EN_TbBoard tbBoard,
                                 float targetPercent,
                                 float step);
 
+/**
+ * @brief Turns the fans on and sets a timer to turn them off after specified seconds
+ * 
+ * @param seconds Duration in seconds to keep the fans on
+ */
+extern void DCMotor_turnFansOnForSeconds(uint32_t seconds);
+
 #endif // DC_MOTOR_H
