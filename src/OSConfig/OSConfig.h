@@ -13,6 +13,8 @@
 
 #define OS_MAIN_TASK_QUEUE_SIZE     32
 
+#define BLE_MAX_DATA_LEN        512
+
 /*******************************************************************************
  * TYPEDEFS AND STRUCTURES
  ******************************************************************************/
@@ -22,6 +24,8 @@ typedef enum EN_extEvents
     EXT_EVENT_NONE = 0,
     EXT_EVENT_UPDATE_CHART,
     EXT_EVENT_END_ROAST,
+    EXT_EVENT_5S_TIMER_TO_START_ROAST,
+    EXT_EVENT_SCHEDULE_ROAST,
     EXT_EVENT_BTN_1_PRESSED,
     EXT_EVENT_BTN_2_PRESSED,
     EXT_EVENT_BTN_3_PRESSED,
@@ -44,7 +48,8 @@ typedef enum {
 
 typedef struct {
     EN_bleEvent event;
-    uint16_t dataLen;  // For DATA_RECEIVED event
+    uint16_t dataLen;
+    // Don't embed large buffer - will be handled separately
 } ST_bleMsg;
 
 extern QueueHandle_t OS_mainTaskQueue;

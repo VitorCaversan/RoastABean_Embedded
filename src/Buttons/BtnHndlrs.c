@@ -84,6 +84,25 @@ static void onConfirmEndRoast(void);
 static void onCancelEndRoast(void);
 
 /**
+ * @defgroup StartRoastRemotely event handlers
+ * @brief Handlers for the 5s timer popup to start a roast and for scheduled roasts.
+ * Used when user initializes a roast remotely.
+ * 
+ * Functions: create5sTimerToStartRoastPopup(),
+ * timerToStartRoastCllbck(),
+ * onConfirmBypassTimer(),
+ * onCancelTimer(),
+ * scheduleRoastToStart(),
+ * onConfirmOrCancelRoastScheduled().
+ */
+static void create5sTimerToStartRoastPopup(void *arg);
+static void timerToStartRoastCllbck(void *arg);
+static void onConfirmBypassTimer(void);
+static void onCancelTimer(void);
+static void scheduleRoastToStart(uint32_t delaySecs);
+static void onConfirmOrCancelRoastScheduled(void);
+
+/**
  * @brief Create a confirmation popup with message and sets button handlers
  * 
  * @param message The message to display in the popup. \0 terminated string.
@@ -110,6 +129,8 @@ static ST_btnsFunc btnsFunc = {0};
 
 static ST_storedChart storedCharts[MAX_CHARTS_TO_SHOW] = {0};
 
+static esp_timer_handle_t periodic5sTimer = NULL;
+
 /*******************************************************************************
  * EXTERNAL FUNCTIONS
  ******************************************************************************/
@@ -131,6 +152,19 @@ extern void btnHndlrs_task(void *arg)
                 case EXT_EVENT_END_ROAST:
                     ESP_LOGI(TAG, "Roast ended");
                     endRoast();
+                break;
+                case EXT_EVENT_5S_TIMER_TO_START_ROAST:
+                    ESP_LOGI(TAG, "Show 5s timer to start roast popup");
+                    create5sTimerToStartRoastPopup(NULL);
+                break;
+                case EXT_EVENT_SCHEDULE_ROAST:
+                    ESP_LOGI(TAG, "Schedule roast to start");
+                    if (msg.data != NULL)
+                    {
+                        scheduleRoastToStart(*((uint32_t *)msg.data));
+                        free(msg.data); // WARNING: This is NECESSARY to avoid memory leak
+                        msg.data = NULL;
+                    }
                 break;
                 case EXT_EVENT_BTN_1_PRESSED:
                     ESP_LOGI(TAG, "Button 1 pressed");
@@ -406,7 +440,7 @@ static void onSelectSelectRoastMenu(void)
     ST_storedChart *selectedChart = &storedCharts[ui->selectedIndex];
     ESP_LOGI(TAG, "Starting roast with chart: %s", selectedChart->chartName);
     
-    char message[128];
+    char message[128] = {0};
     snprintf(message, sizeof(message), "Start roasting with\n%s?", selectedChart->chartName);
     createConfirmationPopupWithHndlrs(message,
                                       onConfirmStartRoast,
@@ -469,7 +503,7 @@ static void createConfirmationPopupWithHndlrs(const char *message,
 
 static void onBackFromRoast(void)
 {
-    char message[128];
+    char message[128] = {0};
     snprintf(message, sizeof(message), "Are you sure to end the roast?");
     createConfirmationPopupWithHndlrs(message,
                                       onConfirmEndRoast,
@@ -553,4 +587,106 @@ static void endRoast(void)
                      onSelectMainMenu);
 
     display_showMainMenu();
+}
+
+static void create5sTimerToStartRoastPopup(void *arg)
+{
+    createConfirmationPopupWithHndlrs("Roast starting in 5 seconds...\nPress confirm to start now.",
+                                      onConfirmBypassTimer,
+                                      onCancelTimer,
+                                      lv_color_black());
+
+    char *buffer = calloc(2056, sizeof(char));
+    if (buffer == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to allocate memory for JSON buffer");
+        return;
+    }
+    size_t outLen = 0;
+    nvs_loadRoastProfile((nvs_getProfileCount() - 1), buffer, 2056, &outLen);
+    json_parseToStoredChart(buffer, &storedCharts[0]);
+    ST_VerticalMenuUi *ui = display_getSelectRoastMenuUi();
+    ui->selectedIndex = 0; // When timer ends, this profile will be used
+    free(buffer);
+
+    const esp_timer_create_args_t periodicTimerArgs = {
+        .callback = timerToStartRoastCllbck,
+        .arg = NULL,
+        .name = "timer_to_start_roast"
+    };
+    
+    ESP_ERROR_CHECK(esp_timer_create(&periodicTimerArgs, &periodic5sTimer));
+    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic5sTimer, S_TO_USECONDS(1)));
+}
+
+static void timerToStartRoastCllbck(void *arg)
+{
+    static uint8_t elapsedSecs = 1;
+
+    elapsedSecs++;
+
+    char message[128] = {0};
+    snprintf(message, sizeof(message), "Roast starting in %d seconds...\nPress confirm to start now.", 5 - elapsedSecs);
+    createConfirmationPopupWithHndlrs(message,
+                                      onConfirmBypassTimer,
+                                      onCancelTimer,
+                                      lv_color_black());
+
+    if (elapsedSecs >= 5)
+    {
+        ESP_ERROR_CHECK(esp_timer_stop(periodic5sTimer));
+        ESP_ERROR_CHECK(esp_timer_delete(periodic5sTimer));
+        periodic5sTimer = NULL;
+        elapsedSecs = 1;
+        onConfirmStartRoast();
+    }
+}
+
+static void onConfirmBypassTimer(void)
+{
+    ESP_ERROR_CHECK(esp_timer_stop(periodic5sTimer));
+    ESP_ERROR_CHECK(esp_timer_delete(periodic5sTimer));
+    periodic5sTimer = NULL;
+
+    onConfirmStartRoast();
+}
+
+static void onCancelTimer(void)
+{
+    ESP_ERROR_CHECK(esp_timer_stop(periodic5sTimer));
+    ESP_ERROR_CHECK(esp_timer_delete(periodic5sTimer));
+    periodic5sTimer = NULL;
+
+    display_hideConfirmationPopup();
+
+    setBtnsCallbacks(NULL,
+                     moveSelectionUpMainMenu,
+                     moveSelectionDownMainMenu,
+                     onSelectMainMenu);
+
+    display_showMainMenu();
+}
+
+static void scheduleRoastToStart(uint32_t delaySecs)
+{
+    const esp_timer_create_args_t oneshotTimerArgs = {
+        .callback = create5sTimerToStartRoastPopup,
+        .arg = NULL,
+        .name = "start_roast_scheduled"
+    };
+    esp_timer_handle_t oneshotTimer = NULL;
+    ESP_ERROR_CHECK(esp_timer_create(&oneshotTimerArgs, &oneshotTimer));
+    ESP_ERROR_CHECK(esp_timer_start_once(oneshotTimer, S_TO_USECONDS(delaySecs)));
+
+    createConfirmationPopupWithHndlrs("Roast scheduled!",
+                                      onConfirmOrCancelRoastScheduled,
+                                      onConfirmOrCancelRoastScheduled,
+                                      lv_color_black());
+
+    ESP_LOGI(TAG, "Roast scheduled to start in %d seconds", delaySecs);
+}
+
+static void onConfirmOrCancelRoastScheduled(void)
+{
+    display_hideConfirmationPopup();
 }

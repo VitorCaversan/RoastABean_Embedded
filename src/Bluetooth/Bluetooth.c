@@ -3,6 +3,7 @@
  ******************************************************************************/
 #include "Bluetooth.h"
 #include "SpiConfig.h"
+#include "esp_heap_caps.h"
 
 /*******************************************************************************
  * MACROS AND DEFINES
@@ -18,12 +19,33 @@ static void hostTask(void *param);
 static int gattCharAccessCb(uint16_t conn_handle, uint16_t attr_handle,
                             struct ble_gatt_access_ctxt *ctxt, void *arg);
 
+/**
+ * @brief Checks is entire payload is received and treats it if so
+ * 
+ * @param data Pointer to received data
+ * @param len Length of the received data
+ */
+static void treatReceivedPayload(const uint8_t *data, uint16_t len);
+
+/**
+ * @brief Parses the received json data and takes appropriate actions
+ * 
+ * @param data Pointer to received data in JSON format
+ * @param len Length of the received data
+ * @return true if data was treated successfully, false otherwise
+ */
+static bool treatReceivedJson(const uint8_t *data, uint16_t len);
+
 /*******************************************************************************
  * LOCAL VARIABLES
  ******************************************************************************/
 static const char *TAG = "BLUETOOTH";
 static bool isConnected = false;
 static uint16_t connHandle = 0;
+
+// Static buffer for accumulating BLE data (shared, not on stack)
+static uint8_t totalReceivedData[2048];
+static uint16_t totalReceivedDataLen = 0;
 static uint8_t receivedData[BLE_MAX_DATA_LEN];
 static uint16_t receivedDataLen = 0;
 
@@ -87,6 +109,8 @@ extern void bluetooth_task(void *arg)
                 break;
                 case BLE_EVENT_DATA_RECEIVED:
                     ESP_LOGI(TAG, "Data received over BLE, length: %d bytes", msg.dataLen);
+                    ESP_LOGI(TAG, "Received data: %.*s", msg.dataLen, receivedData);
+                    treatReceivedPayload(receivedData, msg.dataLen);
                 break;
                 default:
                     ESP_LOGW(TAG, "Unknown BLE event: %d", msg.event);
@@ -99,8 +123,7 @@ extern void bluetooth_task(void *arg)
 
 extern void bluetooth_init(void)
 {
-    ESP_LOGI(TAG, "Initializing NimBLE");
-    ESP_LOGI(TAG, "Free heap before BLE init: %lu bytes", esp_get_free_heap_size());
+    ESP_LOGI(TAG, "Initializing NimBLE - Free heap: %lu bytes", esp_get_free_heap_size());
     
     // NVS already initialized by nvs_init() in main
     
@@ -345,9 +368,8 @@ static int gattCharAccessCb(uint16_t conn_handle, uint16_t attr_handle,
                 receivedData[receivedDataLen] = '\0';
             }
             
-            ESP_LOGI(TAG, "JSON data stored: %d bytes", receivedDataLen);
+            ESP_LOGI(TAG, "Data stored: %d bytes", receivedDataLen);
             
-            // Send data received event to queue
             if (OS_bleEventQueue != NULL) {
                 ST_bleMsg msg = {.event = BLE_EVENT_DATA_RECEIVED, .dataLen = receivedDataLen};
                 xQueueSend(OS_bleEventQueue, &msg, 0);
@@ -359,4 +381,157 @@ static int gattCharAccessCb(uint16_t conn_handle, uint16_t attr_handle,
             ESP_LOGW(TAG, "Unsupported GATT operation: %d", ctxt->op);
             return BLE_ATT_ERR_UNLIKELY;
     }
+}
+
+static void treatReceivedPayload(const uint8_t *data, uint16_t len)
+{
+    if (totalReceivedDataLen + len >= sizeof(totalReceivedData))
+    {
+        ESP_LOGE(TAG, "Total received data buffer overflow, resetting");
+        totalReceivedDataLen = 0;
+        return;
+    }
+
+    memcpy(&totalReceivedData[totalReceivedDataLen], data, len);
+    totalReceivedDataLen += len;
+    
+    totalReceivedData[totalReceivedDataLen] = '\0';
+    
+    ESP_LOGI(TAG, "Accumulated %d bytes so far", totalReceivedDataLen);
+
+    int braceCount = 0;
+    bool foundOpenBrace = false;
+    
+    for (uint16_t i = 0; i < totalReceivedDataLen; i++)
+    {
+        if (totalReceivedData[i] == '{')
+        {
+            braceCount++;
+            foundOpenBrace = true;
+        }
+        else if (totalReceivedData[i] == '}')
+        {
+            braceCount--;
+        }
+    }
+
+    if (foundOpenBrace && braceCount == 0)
+    {
+        ESP_LOGI(TAG, "Complete JSON received (%d bytes), processing...", totalReceivedDataLen);
+        
+        if (treatReceivedJson(totalReceivedData, totalReceivedDataLen))
+        {
+            ESP_LOGI(TAG, "JSON processed successfully");
+        }
+        else
+        {
+            ESP_LOGE(TAG, "Failed to process JSON");
+        }
+        
+        totalReceivedDataLen = 0;
+        memset(totalReceivedData, 0, sizeof(totalReceivedData));
+    }
+    else if (braceCount < 0)
+    {
+        ESP_LOGE(TAG, "Invalid JSON structure detected, resetting buffer");
+        totalReceivedDataLen = 0;
+        memset(totalReceivedData, 0, sizeof(totalReceivedData));
+    }
+    else
+    {
+        ESP_LOGI(TAG, "Waiting for more data (brace count: %d)", braceCount);
+    }
+}
+
+static bool treatReceivedJson(const uint8_t *data, uint16_t len)
+{
+    ST_storedChart *chart = heap_caps_malloc(sizeof(ST_storedChart), MALLOC_CAP_8BIT);
+    if (chart == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to allocate memory for chart");
+        return false;
+    }
+    memset(chart, 0, sizeof(ST_storedChart));
+
+    if (!json_parseToStoredChart((const char *)data, chart))
+    {
+        free(chart);
+        return false;
+    }
+
+    esp_err_t err = nvs_saveRoastProfile(nvs_getProfileCount(), (const char *)data, len);
+    if (err != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to save roast profile to NVS: %d", err);
+        free(chart);
+        return false;
+    }
+
+    if (chart->isScheduled)
+    {
+        time_t currentTime = 0;
+        if (!timeUtils_parseIso8601(chart->currentTime, &currentTime))
+        {
+            ESP_LOGE(TAG, "Failed to parse current time");
+            free(chart);
+            return false;
+        }
+
+        time_t scheduledTime = 0;
+        if (!timeUtils_parseIso8601(chart->scheduledTime, &scheduledTime))
+        {
+            ESP_LOGE(TAG, "Failed to parse scheduled time");
+            free(chart);
+            return false;
+        }
+
+        ESP_LOGI(TAG, "Current time: %s", chart->currentTime);
+        ESP_LOGI(TAG, "Scheduled time: %s", chart->scheduledTime);
+        ESP_LOGI(TAG, "Current time (epoch): %ld", currentTime);
+        ESP_LOGI(TAG, "Scheduled time (epoch): %ld", scheduledTime);
+        if (currentTime >= scheduledTime)
+        {
+            ESP_LOGW(TAG, "Scheduled time is in the past current time");
+            free(chart);
+            return false;
+        }
+
+        // Allocate on heap to safely pass through queue
+        int32_t *secsToStartRoast = heap_caps_malloc(sizeof(int32_t), MALLOC_CAP_8BIT);
+        if (secsToStartRoast == NULL)
+        {
+            ESP_LOGE(TAG, "Failed to allocate memory for delay");
+            free(chart);
+            return false;
+        }
+        *secsToStartRoast = timeUtils_diffSeconds(scheduledTime, currentTime);
+
+        ST_extEventMsg screenMsg = {0};
+        screenMsg.event = EXT_EVENT_SCHEDULE_ROAST;
+        screenMsg.data = secsToStartRoast;  // Receiver MUST free this!
+
+        if (xQueueSend(OS_btnHndlrsTaskQueue, &screenMsg, pdMS_TO_TICKS(100)) != pdTRUE)
+        {
+            ESP_LOGE(TAG, "Failed to send schedule roast event");
+            free(secsToStartRoast);
+            free(chart);
+            return false;
+        }
+    }
+    else
+    {
+        ST_extEventMsg screenMsg = {0};
+        screenMsg.event = EXT_EVENT_5S_TIMER_TO_START_ROAST;
+        screenMsg.data = NULL;
+
+        if (xQueueSend(OS_btnHndlrsTaskQueue, &screenMsg, pdMS_TO_TICKS(100)) != pdTRUE)
+        {
+            ESP_LOGE(TAG, "Failed to send start roast event");
+            free(chart);
+            return false;
+        }
+    }
+
+    free(chart);
+    return true;
 }

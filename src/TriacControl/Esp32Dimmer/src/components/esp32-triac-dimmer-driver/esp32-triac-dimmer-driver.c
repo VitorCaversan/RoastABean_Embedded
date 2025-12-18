@@ -111,9 +111,12 @@ void config_timer(int ACfreq)
         .resolution_hz = TIMER_BASE_CLK
     };
 
-	ESP_LOGI(TAG, "Timer configuration - configure interrupt and timer");
 	/* Configure the alarm value and the interrupt on alarm. */
-	ESP_ERROR_CHECK(gptimer_new_timer(&m_timer_config, &gptimer));
+	esp_err_t ret = gptimer_new_timer(&m_timer_config, &gptimer);
+	if (ret != ESP_OK) {
+		ESP_LOGE(TAG, "Failed to create gptimer: %s (0x%x)", esp_err_to_name(ret), ret);
+		return;
+	}
 
     /* Configure the alarm value and the interrupt on alarm. */
     config_alarm(&gptimer, ACfreq);

@@ -20,6 +20,7 @@
 #include "Bluetooth.h"
 #include "NVShndlr.h"
 #include "JsonHndlr.h"
+#include "TimeUtils.h"
 
 /*******************************************************************************
  * MACROS AND DEFINES

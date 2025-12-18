@@ -35,10 +35,8 @@ dimmertyp *triacDimmer = NULL;
 extern void triac_triacInit(void)
 {
     triacDimmer = createDimmer(TRIAC_GPIO, ZERO_CROSS_GPIO);
-
     begin(triacDimmer, NORMAL_MODE, OFF, 60);
-
-    triac_setPwrPercent(10.0f);
+    triac_setPwrPercent(7.0f);
 }
 
 extern void triac_setState(bool onOff)

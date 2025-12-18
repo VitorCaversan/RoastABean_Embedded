@@ -52,6 +52,8 @@ static const char *TAG = "MAIN";
 
 void app_main(void)
 {
+    ESP_LOGI(TAG, "System starting - Free heap: %lu bytes", esp_get_free_heap_size());
+    
     OS_btnHndlrsTaskQueue = xQueueCreate(32, sizeof(ST_extEventMsg));
     configASSERT(OS_btnHndlrsTaskQueue != NULL);
     OS_bleEventQueue = xQueueCreate(16, sizeof(ST_bleMsg));
@@ -61,7 +63,7 @@ void app_main(void)
     
     // Initialize BLE first (PHY callbacks will manage SPI bus suspension/restoration)
     vTaskDelay(pdMS_TO_TICKS(100));
-    // bluetooth_init();
+    bluetooth_init();
     vTaskDelay(pdMS_TO_TICKS(100));
     
     // Initialize SPI peripherals after BLE (SPI bus is now safe to use)
@@ -73,12 +75,21 @@ void app_main(void)
     display_showMainMenu();
     tempSens_init();
     
+    ESP_LOGI(TAG, "Stopping BLE advertising for triac init");
+    bluetooth_stopAdvertising();
+    vTaskDelay(pdMS_TO_TICKS(100));
+    
     // Initialize remaining peripherals
     btnHndlrs_btnHndlrsInit();
     btn_configButtons();
+    vTaskDelay(pdMS_TO_TICKS(100));
     triac_triacInit();
     pid_PIDInit();
     DCMotor_initDcMotors();
+    
+    vTaskDelay(pdMS_TO_TICKS(100));
+    ESP_LOGI(TAG, "Restarting BLE advertising");
+    bluetooth_startAdvertising();
 
 #if BUTTON_DEBUG
     OS_mainTaskQueue = xQueueCreate(32, sizeof(EN_buttons));
@@ -86,7 +97,7 @@ void app_main(void)
     xTaskCreatePinnedToCore(mainTask, "mainTask", 4096, NULL, configMAX_PRIORITIES - 1, NULL, 1);
 #else
     xTaskCreatePinnedToCore(btnHndlrs_task, "btnHndlrsTask", 8192, NULL, configMAX_PRIORITIES - 2, NULL, 1);
-    xTaskCreatePinnedToCore(bluetooth_task, "bluetoothTask", 4096, NULL, configMAX_PRIORITIES - 3, NULL, 1);
+    xTaskCreatePinnedToCore(bluetooth_task, "bluetoothTask", 8192, NULL, configMAX_PRIORITIES - 3, NULL, 1);
 #endif
 }
 

@@ -186,8 +186,8 @@ Examples:
                 274, 218, 247, 285, 200, 231, 285
             ],
             "pointsQuantity": 31,
-            "isScheduled": False,
-            "scheduledTime": "2025-11-24T21:31:00.000Z",
+            "isScheduled": True,
+            "scheduledTime": "2025-12-18T01:11:00.000Z",
             "currentTime": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
             "curveName": "teste novo"
         }

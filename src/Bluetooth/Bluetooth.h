@@ -18,12 +18,14 @@
 #include "services/gatt/ble_svc_gatt.h"
 
 #include "OSConfig.h"
+#include "JsonHndlr.h"
+#include "NVShndlr.h"
+#include "TimeUtils.h"
 
 /*******************************************************************************
  * MACROS AND DEFINES
  ******************************************************************************/
 #define BLE_DEVICE_NAME         "RoastABean"
-#define BLE_MAX_DATA_LEN        2048
 
 // Nordic UART Service (NUS) UUIDs
 #define BLE_SVC_NUS_UUID16                                  0x0001
