@@ -10,6 +10,7 @@
  ******************************************************************************/
 
 #define BUTTON_DEBUG                 0
+#define NVS_DEBUG                    0
 
 #define OS_MAIN_TASK_QUEUE_SIZE     32
 

@@ -453,7 +453,7 @@ static bool treatReceivedJson(const uint8_t *data, uint16_t len)
     }
     memset(chart, 0, sizeof(ST_storedChart));
 
-    if (!json_parseToStoredChart((const char *)data, chart))
+    if (!json_jsonToStoredChart((const char *)data, chart))
     {
         free(chart);
         return false;

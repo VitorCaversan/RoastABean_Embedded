@@ -298,6 +298,7 @@ static void onSelectMainMenu(void)
         break;
         case 1: // "Manage Roast Curves"
             ESP_LOGI(TAG, "Managing roast curves...");
+            nvs_eraseAllProfiles();
             // TODO: Navigate to roast curves management screen
         break;
         case 2: // "Connect"
@@ -312,8 +313,10 @@ static void onSelectMainMenu(void)
 
 static void setSelectRoastMenu(void)
 {
-    float currTemp = tempSens_getTemperature();
     uint32_t i = 0;
+
+#if NVS_DEBUG
+    float currTemp = tempSens_getTemperature();
     uint32_t j = 0;
     for (i = 0; i < MAX_CHARTS_TO_SHOW; i++)
     {
@@ -384,6 +387,7 @@ static void setSelectRoastMenu(void)
             sprintf(storedCharts[i].chartName, "Test Chart %ld", i + 1);
         }
     }
+#endif
 
     char *buffer = calloc(2056, sizeof(char));
     if (buffer == NULL)
@@ -395,8 +399,15 @@ static void setSelectRoastMenu(void)
     size_t outLen = 0;
     for (i = 0; i < MAX_CHARTS_TO_SHOW; i++)
     {
+#if NVS_DEBUG
+        json_storedChartToJson(&storedCharts[i], buffer, 2055);
+        nvs_saveRoastProfile(i, buffer, strlen(buffer));
+#else
         nvs_loadRoastProfile(i, buffer, 2056, &outLen);
-        json_parseToStoredChart(buffer, &storedCharts[i]);
+        json_jsonToStoredChart(buffer, &storedCharts[i]);
+        ESP_LOGI(TAG, "Loaded chart %d: %s", i, buffer);
+#endif
+        memset(buffer, 0, 2056);
     }
     
     free(buffer);
@@ -581,6 +592,18 @@ static void endRoast(void)
         printf("%.2f\n", selectedChart->achievedProfile[i]);
     }
 
+    char *buffer = calloc(NVS_MAX_PROFILE_SIZE, sizeof(char));
+    if (buffer == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to allocate memory for JSON buffer");
+    }
+    else
+    {
+        json_storedChartToJson(selectedChart, buffer, NVS_MAX_PROFILE_SIZE);
+        nvs_saveRoastProfile(ui->selectedIndex, buffer, strlen(buffer));
+    }
+    free(buffer);
+
     setBtnsCallbacks(NULL,
                      moveSelectionUpMainMenu,
                      moveSelectionDownMainMenu,
@@ -604,7 +627,7 @@ static void create5sTimerToStartRoastPopup(void *arg)
     }
     size_t outLen = 0;
     nvs_loadRoastProfile((nvs_getProfileCount() - 1), buffer, 2056, &outLen);
-    json_parseToStoredChart(buffer, &storedCharts[0]);
+    json_jsonToStoredChart(buffer, &storedCharts[0]);
     ST_VerticalMenuUi *ui = display_getSelectRoastMenuUi();
     ui->selectedIndex = 0; // When timer ends, this profile will be used
     free(buffer);

@@ -43,6 +43,7 @@ typedef struct ST_storedChart
     bool isScheduled;
     char scheduledTime[32];  // ISO 8601 format: "2025-11-24T21:31:00.000Z"
     char currentTime[32];    // ISO 8601 format: "2025-11-23T21:30:00.496Z"
+    bool isFeedbackSent;
 } ST_storedChart;
 
 /*******************************************************************************

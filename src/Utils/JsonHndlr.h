@@ -31,31 +31,35 @@
  * 
  * Parses a JSON object with the following structure:
  * {
- *   "temperatures": [array of floats],
+ *   "curveName": "string",
  *   "pointsQuantity": number,
+ *   "temperatures": [array of floats],
+ *   "achievedTemperatures": [array of floats] (optional),
  *   "isScheduled": boolean,
  *   "scheduledTime": "ISO 8601 string",
  *   "currentTime": "ISO 8601 string",
- *   "curveName": "string"
+ *   "isFeedbackSent": boolean
  * }
  * 
  * @param jsonStr JSON string to parse
  * @param chart Pointer to ST_storedChart structure to fill
  * @return true on success, false on error
  */
-extern bool json_parseToStoredChart(const char *jsonStr, ST_storedChart *chart);
+extern bool json_jsonToStoredChart(const char *jsonStr, ST_storedChart *chart);
 
 /**
  * @brief Convert ST_storedChart structure to JSON string
  * 
  * Creates a JSON object with the following structure:
  * {
- *   "temperatures": [array of floats],
- *   "pointsQuantity": number,
  *   "curveName": "string",
+ *   "pointsQuantity": number,
  *   "isScheduled": boolean,
  *   "scheduledTime": "ISO 8601 string",
- *   "currentTime": "ISO 8601 string"
+ *   "currentTime": "ISO 8601 string",
+ *   "temperatures": [array of floats],
+ *   "achievedTemperatures": [array of floats],
+ *   "isFeedbackSent": boolean
  * }
  * 
  * @param chart Pointer to ST_storedChart structure to convert

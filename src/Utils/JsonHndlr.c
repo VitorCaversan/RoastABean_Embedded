@@ -21,7 +21,7 @@ static const char *TAG = "JSON_HNDLR";
  * EXTERNAL FUNCTIONS
  ******************************************************************************/
 
-extern bool json_parseToStoredChart(const char *jsonStr, ST_storedChart *chart)
+extern bool json_jsonToStoredChart(const char *jsonStr, ST_storedChart *chart)
 {
     if (jsonStr == NULL || chart == NULL) {
         ESP_LOGE(TAG, "Invalid parameters");
@@ -98,6 +98,38 @@ extern bool json_parseToStoredChart(const char *jsonStr, ST_storedChart *chart)
         }
     }
 
+    if (success) { // OPTIONAL: Parse achievedTemp array if present
+        cJSON *achievedTemp = cJSON_GetObjectItem(root, "achievedTemperatures");
+        if (cJSON_IsArray(achievedTemp)) {
+            int arraySize = cJSON_GetArraySize(achievedTemp);
+            if (arraySize != (int)chart->totalMins) {
+                ESP_LOGW(TAG, "achievedTemp array size (%d) doesn't match pointsQuantity (%lu)",
+                         arraySize, chart->totalMins);
+            }
+
+            int minSize = (arraySize < (int)chart->totalMins) ? arraySize : (int)chart->totalMins;
+            for (int i = 0; i < minSize; i++) {
+                cJSON *temp = cJSON_GetArrayItem(achievedTemp, i);
+                if (cJSON_IsNumber(temp)) {
+                    chart->achievedProfile[i] = (float)temp->valuedouble;
+                } else {
+                    ESP_LOGW(TAG, "Invalid temperature at index %d", i);
+                    chart->achievedProfile[i] = 0.0f;
+                }
+            }
+
+            // Fill remaining with zeros if array was shorter
+            for (int i = minSize; i < (int)chart->totalMins; i++) {
+                chart->achievedProfile[i] = 0.0f;
+            }
+        } else {
+            for (uint32_t i = 0; i < chart->totalMins; i++){
+                chart->achievedProfile[i] = NAN;
+            }
+            ESP_LOGE(TAG, "achievedTemp array not found or invalid");
+        }
+    }
+
     // Parse isScheduled
     if (success) {
         cJSON *isScheduled = cJSON_GetObjectItem(root, "isScheduled");
@@ -130,12 +162,16 @@ extern bool json_parseToStoredChart(const char *jsonStr, ST_storedChart *chart)
         }
     }
 
-    // Initialize achievedProfile to NAN (not yet recorded)
     if (success) {
-        for (uint32_t i = 0; i < chart->totalMins; i++) {
-            chart->achievedProfile[i] = NAN;
+        cJSON *isFeedbackSent = cJSON_GetObjectItem(root, "isFeedbackSent");
+        if (cJSON_IsBool(isFeedbackSent)) {
+            chart->isFeedbackSent = cJSON_IsTrue(isFeedbackSent);
+        } else {
+            chart->isFeedbackSent = false;
         }
+    }
 
+    if (success) {
         ESP_LOGI(TAG, "Successfully parsed chart: '%s' with %lu points", 
                  chart->chartName, chart->totalMins);
     }
@@ -199,7 +235,6 @@ extern bool json_storedChartToJson(const ST_storedChart *chart, char *jsonStr, s
             success = false;
         }
     }
-
     if (success) {
         for (uint32_t i = 0; i < chart->totalMins && i < MAX_ROAST_TIME_IN_MIN; i++) {
             cJSON *temp = cJSON_CreateNumber(chart->tempProfile[i]);
@@ -212,9 +247,37 @@ extern bool json_storedChartToJson(const ST_storedChart *chart, char *jsonStr, s
             cJSON_AddItemToArray(temperatures, temp);
         }
     }
-
     if (success) {
         cJSON_AddItemToObject(root, "temperatures", temperatures);
+    }
+
+    if (success) {
+        temperatures = cJSON_CreateArray();
+        if (temperatures == NULL) {
+            ESP_LOGE(TAG, "Failed to create achieved temperatures array");
+            success = false;
+        }
+    }
+    if (success) {
+        for (uint32_t i = 0; i < chart->totalMins && i < MAX_ROAST_TIME_IN_MIN; i++) {
+            cJSON *temp = cJSON_CreateNumber(chart->achievedProfile[i]);
+            if (temp == NULL) {
+                ESP_LOGE(TAG, "Failed to create achieved temperature number at index %lu", i);
+                cJSON_Delete(temperatures);
+                success = false;
+                break;
+            }
+            cJSON_AddItemToArray(temperatures, temp);
+        }
+    }
+    if (success) {
+        cJSON_AddItemToObject(root, "achievedTemperatures", temperatures);
+    }
+
+    // Add isFeedbackSent
+    if (success && cJSON_AddBoolToObject(root, "isFeedbackSent", chart->isFeedbackSent) == NULL) {
+        ESP_LOGE(TAG, "Failed to add isFeedbackSent");
+        success = false;
     }
 
     // Convert to string
