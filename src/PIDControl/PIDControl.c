@@ -69,8 +69,8 @@ extern void pid_PIDInit(void)
 {
     ESP_LOGI(TAG, "Create PID control block");
     pid_ctrl_parameter_t pid_runtime_param = {
-        .kp = 0.6,
-        .ki = 0.4,
+        .kp = 1.0,
+        .ki = 0.04,
         .kd = 0.0,
         .max_output   = 99.0,
         .min_output   = 7.0,
