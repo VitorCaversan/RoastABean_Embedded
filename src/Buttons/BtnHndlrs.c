@@ -464,6 +464,9 @@ static void onConfirmStartRoast(void)
     ESP_LOGI(TAG, "Roast confirmed!");
 
     display_hideConfirmationPopup();
+
+    bluetooth_stopAdvertising();
+    vTaskDelay(pdMS_TO_TICKS(100));
     
     setBtnsCallbacks(onBackFromRoast, NULL, NULL, NULL);
 

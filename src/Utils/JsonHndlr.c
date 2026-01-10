@@ -126,7 +126,7 @@ extern bool json_jsonToStoredChart(const char *jsonStr, ST_storedChart *chart)
             for (uint32_t i = 0; i < chart->totalMins; i++){
                 chart->achievedProfile[i] = NAN;
             }
-            ESP_LOGE(TAG, "achievedTemp array not found or invalid");
+            ESP_LOGW(TAG, "achievedTemp array not found or invalid");
         }
     }
 

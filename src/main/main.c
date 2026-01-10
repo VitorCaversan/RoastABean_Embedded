@@ -96,6 +96,7 @@ void app_main(void)
     configASSERT(OS_mainTaskQueue != NULL);
     xTaskCreatePinnedToCore(mainTask, "mainTask", 4096, NULL, configMAX_PRIORITIES - 1, NULL, 1);
 #else
+    xTaskCreatePinnedToCore(tempSens_task, "tempSensTask", 4096, NULL, configMAX_PRIORITIES - 1, NULL, 1);
     xTaskCreatePinnedToCore(btnHndlrs_task, "btnHndlrsTask", 8192, NULL, configMAX_PRIORITIES - 2, NULL, 1);
     xTaskCreatePinnedToCore(bluetooth_task, "bluetoothTask", 8192, NULL, configMAX_PRIORITIES - 3, NULL, 1);
 #endif

@@ -5,6 +5,7 @@
  * INCLUDES
  ******************************************************************************/
 #include <stdio.h>
+#include <math.h>
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -34,6 +35,13 @@
  * @brief Initialize the MAX31855 thermocouple-to-digital converter library
  */
 extern void tempSens_init(void);
+
+/**
+ * @brief Task to periodically read temperature from the MAX31855
+ * 
+ * @param arg Unused
+ */
+extern void tempSens_task(void *arg);
 
 /**
  * @brief Get the temperature reading from the MAX31855 in Celsius
