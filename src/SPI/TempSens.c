@@ -52,7 +52,7 @@ extern void tempSens_task(void *arg)
             if ((fabs(tempInCelcius - currTempCelcius) > 0.25f) ||
                 (fabs(coldJunctionTemp - currColdJunctionTemp) > 0.25f))
             {
-                ESP_LOGI(TAG, "Temperature: %.2f°C, Cold junction temperature: %.2f°C", tempInCelcius, coldJunctionTemp);
+                // ESP_LOGI(TAG, "Temperature: %.2f°C, Cold junction temperature: %.2f°C", tempInCelcius, coldJunctionTemp);
             }
             
             currTempCelcius = tempInCelcius;
@@ -61,7 +61,23 @@ extern void tempSens_task(void *arg)
 
         vTaskDelay(pdMS_TO_TICKS(100));
     }
+}
 
+extern void tempSens_suspendTask(void)
+{
+    if (OS_tempSensTaskHandle != NULL)
+    {
+        ESP_LOGI(TAG, "Suspending temp sensor task for popup creation");
+        vTaskSuspend(OS_tempSensTaskHandle);
+    }
+}
+extern void tempSens_resumeTask(void)
+{
+    if (OS_tempSensTaskHandle != NULL)
+    {
+        ESP_LOGI(TAG, "Resuming temp sensor task");
+        vTaskResume(OS_tempSensTaskHandle);
+    }
 }
 
 float tempSens_getTemperature(void)

@@ -511,8 +511,12 @@ static void createConfirmationPopupWithHndlrs(const char *message,
 {
     setBtnsCallbacks(onCancel, NULL, NULL, onConfirm);
     
+    tempSens_suspendTask();
+    
     display_createConfirmationPopup(message, currScrBckgnd);
     display_showConfirmationPopup();
+    
+    tempSens_resumeTask();
 }
 
 static void onBackFromRoast(void)
@@ -528,6 +532,8 @@ static void onBackFromRoast(void)
 static void onConfirmEndRoast(void)
 {
     ESP_LOGI(TAG, "End roast confirmed!");
+
+    tempSens_suspendTask();
 
     display_hideConfirmationPopup();
 
@@ -549,6 +555,8 @@ static void onConfirmEndRoast(void)
                      onSelectMainMenu);
 
     display_showMainMenu();
+
+    tempSens_resumeTask();
 }
 
 static void onCancelEndRoast(void)

@@ -44,12 +44,26 @@ extern void tempSens_init(void);
 extern void tempSens_task(void *arg);
 
 /**
+ * @brief Suspend the temperature sensor task (for SPI bus sharing)
+ */
+extern void tempSens_suspendTask(void);
+/**
+ * @brief Resume the temperature sensor task (for SPI bus sharing)
+ */
+extern void tempSens_resumeTask(void);
+
+/**
  * @brief Get the temperature reading from the MAX31855 in Celsius
  * 
  * @return float Temperature in Celsius, or -300.0f if an error occurred
  */
 extern float tempSens_getTemperature(void);
 
+/**
+ * @brief Get the cold junction temperature from the MAX31855 in Celsius
+ * 
+ * @return float Temperature in Celsius
+ */
 extern float tempSens_getColdJunctionTemperature(void);
 
 #endif // TEMP_SENS_H

@@ -56,6 +56,7 @@ typedef struct {
 extern QueueHandle_t OS_mainTaskQueue;
 extern QueueHandle_t OS_btnHndlrsTaskQueue;
 extern QueueHandle_t OS_bleEventQueue;
+extern TaskHandle_t OS_tempSensTaskHandle;
 
 /*******************************************************************************
  * EXTERNAL FUNCTION DECLARATIONS
