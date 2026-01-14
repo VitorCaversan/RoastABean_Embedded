@@ -147,7 +147,9 @@ extern void btnHndlrs_task(void *arg)
             {
                 case EXT_EVENT_UPDATE_CHART:
                     ESP_LOGI(TAG, "Update chart");
+                    tempSens_suspendTask();
                     updateChart((ST_chartUpdateData *)msg.data);
+                    tempSens_resumeTask();
                 break;
                 case EXT_EVENT_END_ROAST:
                     ESP_LOGI(TAG, "Roast ended");
@@ -563,9 +565,13 @@ static void onCancelEndRoast(void)
 {
     ESP_LOGI(TAG, "End roast cancelled");
 
+    tempSens_suspendTask();
+
     display_hideConfirmationPopup();
     
     setBtnsCallbacks(onBackFromRoast, NULL, NULL, NULL);
+
+    tempSens_resumeTask();
 }
 
 static void endRoast(void)

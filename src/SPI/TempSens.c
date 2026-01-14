@@ -67,7 +67,6 @@ extern void tempSens_suspendTask(void)
 {
     if (OS_tempSensTaskHandle != NULL)
     {
-        ESP_LOGI(TAG, "Suspending temp sensor task for popup creation");
         vTaskSuspend(OS_tempSensTaskHandle);
     }
 }
@@ -75,7 +74,6 @@ extern void tempSens_resumeTask(void)
 {
     if (OS_tempSensTaskHandle != NULL)
     {
-        ESP_LOGI(TAG, "Resuming temp sensor task");
         vTaskResume(OS_tempSensTaskHandle);
     }
 }
