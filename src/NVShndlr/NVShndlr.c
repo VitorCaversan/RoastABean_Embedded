@@ -10,6 +10,8 @@
 #define NVS_PROFILE_KEY_PREFIX  "profile_"
 #define NVS_COUNT_KEY           "profile_count"
 
+#define NVS_MAX_KEY_LENGTH      15
+
 /*******************************************************************************
  * LOCAL FUNCTION DECLARATIONS
  ******************************************************************************/
@@ -69,6 +71,11 @@ extern esp_err_t nvs_saveRoastProfile(uint8_t profileId, const char *data, size_
         ESP_LOGE(TAG, "Invalid data or length: %d bytes", dataLen);
         return ESP_ERR_INVALID_ARG;
     }
+    else if (profileId >= MAX_CHARTS_TO_STORE)
+    {
+        ESP_LOGE(TAG, "Profile ID %d exceeds max allowed %d", profileId, MAX_CHARTS_TO_STORE - 1);
+        return ESP_ERR_INVALID_ARG;
+    }
     
     char key[NVS_MAX_KEY_LENGTH + 1];
     buildProfileKey(profileId, key);
@@ -116,6 +123,11 @@ extern esp_err_t nvs_loadRoastProfile(uint8_t profileId, char *data, size_t maxL
     if (data == NULL || maxLen == 0)
     {
         ESP_LOGE(TAG, "Invalid buffer");
+        return ESP_ERR_INVALID_ARG;
+    }
+    else if (profileId >= MAX_CHARTS_TO_STORE)
+    {
+        ESP_LOGE(TAG, "Profile ID %d exceeds max allowed %d", profileId, MAX_CHARTS_TO_STORE - 1);
         return ESP_ERR_INVALID_ARG;
     }
     

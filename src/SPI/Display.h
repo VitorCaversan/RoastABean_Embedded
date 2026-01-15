@@ -38,7 +38,6 @@
 #define MAX_VERTICAL_MENU_OPTION_COUNT    10
 
 #define MAIN_MENU_OPTION_COUNT      3
-#define SELECT_ROAST_MENU_OPTION_COUNT    3
 
 /*******************************************************************************
  * TYPEDEFS AND STRUCTURES

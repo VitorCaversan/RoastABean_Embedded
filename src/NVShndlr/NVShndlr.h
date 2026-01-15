@@ -24,7 +24,7 @@
 /*******************************************************************************
  * MACROS AND DEFINES
  ******************************************************************************/
-#define NVS_MAX_KEY_LENGTH      15
+#define MAX_CHARTS_TO_STORE     10
 #define NVS_MAX_PROFILE_SIZE    2048
 
 #define MAX_CHART_NAMESIZE    64

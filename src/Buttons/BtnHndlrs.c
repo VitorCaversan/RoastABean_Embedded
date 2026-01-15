@@ -127,7 +127,7 @@ static const char *TAG = "BTN_HNDLRS";
 
 static ST_btnsFunc btnsFunc = {0};
 
-static ST_storedChart storedCharts[MAX_CHARTS_TO_SHOW] = {0};
+static ST_storedChart storedCharts[MAX_CHARTS_TO_STORE] = {0};
 
 static esp_timer_handle_t periodic5sTimer = NULL;
 
@@ -320,7 +320,7 @@ static void setSelectRoastMenu(void)
 #if NVS_DEBUG
     float currTemp = tempSens_getTemperature();
     uint32_t j = 0;
-    for (i = 0; i < MAX_CHARTS_TO_SHOW; i++)
+    for (i = 0; i < 3; i++)
     {
         if (i == 0)
         {
@@ -402,7 +402,7 @@ static void setSelectRoastMenu(void)
     }
 
     size_t outLen = 0;
-    for (i = 0; i < MAX_CHARTS_TO_SHOW; i++)
+    for (i = 0; i < nvs_getProfileCount(); i++)
     {
 #if NVS_DEBUG
         json_storedChartToJson(&storedCharts[i], buffer, 2055);
@@ -422,7 +422,7 @@ static void setSelectRoastMenu(void)
                      moveSelectionDownSelectRoastMenu,
                      onSelectSelectRoastMenu);
 
-    display_showSelectRoastMenu(storedCharts, MAX_CHARTS_TO_SHOW);
+    display_showSelectRoastMenu(storedCharts, nvs_getProfileCount());
 }
 
 static void moveSelectionUpSelectRoastMenu(void)
@@ -432,7 +432,7 @@ static void moveSelectionUpSelectRoastMenu(void)
         ESP_LOGW(TAG, "Select roast menu UI not initialized");
         return;
     }
-    moveSelection(ui, -1, SELECT_ROAST_MENU_OPTION_COUNT);
+    moveSelection(ui, -1, nvs_getProfileCount());
 }
 
 static void moveSelectionDownSelectRoastMenu(void)
@@ -442,7 +442,7 @@ static void moveSelectionDownSelectRoastMenu(void)
         ESP_LOGW(TAG, "Select roast menu UI not initialized");
         return;
     }
-    moveSelection(ui, 1, SELECT_ROAST_MENU_OPTION_COUNT);
+    moveSelection(ui, 1, nvs_getProfileCount());
 }
 
 static void onSelectSelectRoastMenu(void)

@@ -568,6 +568,7 @@ extern void display_applySelectionStyle(ST_VerticalMenuUi *ui, int optionQty)
         {
             lv_obj_add_style(b, &ui->styleItemSelected, 0);
             lv_obj_remove_style(b, &ui->styleItem, 0);
+            lv_obj_scroll_to_view_recursive(b, LV_ANIM_ON);
         }
         else
         {
@@ -596,20 +597,30 @@ extern ST_VerticalMenuUi *display_getMainMenuUi(void)
 
 extern void display_createSelectRoastMenu(void)
 {
-    createVerticalMenuUi(&selectRoastMenuUi, "Select Roast Profile", NULL, MAIN_MENU_OPTION_COUNT);
+    createVerticalMenuUi(&selectRoastMenuUi, "Select Roast Profile", NULL, nvs_getProfileCount());
 }
 
 extern void display_showSelectRoastMenu(ST_storedChart *charts, uint8_t chartCount)
 {
-    if (selectRoastMenuUi.screen != NULL) {
+    if (chartCount > MAX_VERTICAL_MENU_OPTION_COUNT)
+    {
+        ESP_LOGE(TAG, "Chart count (%d) exceeds max menu options (%d)", chartCount, MAX_VERTICAL_MENU_OPTION_COUNT);
+        chartCount = MAX_VERTICAL_MENU_OPTION_COUNT;
+    }
+
+    if (selectRoastMenuUi.screen != NULL)
+    {
         bool ok = lvgl_port_lock(0);
         if (!ok) { return; }
         
         // Update menu labels with chart names
-        for (int i = 0; ((i < chartCount) && (i < MAX_VERTICAL_MENU_OPTION_COUNT)); ++i) {
-            if (selectRoastMenuUi.menuOptions[i] != NULL) {
+        for (int i = 0; ((i < chartCount) && (i < MAX_VERTICAL_MENU_OPTION_COUNT)); ++i)
+        {
+            if (selectRoastMenuUi.menuOptions[i] != NULL)
+            {
                 lv_obj_t *label = lv_obj_get_child(selectRoastMenuUi.menuOptions[i], 0);
-                if (label != NULL) {
+                if (label != NULL)
+                {
                     lv_label_set_text(label, charts[i].chartName);
                 }
             }
@@ -801,7 +812,12 @@ static lv_obj_t *makeMenuOption(lv_obj_t *parent, const char *text)
 
 static void createVerticalMenuUi(ST_VerticalMenuUi *vertMenuUi, const char *menuTitle, const char **optionLabels, int optionQty)
 {
-    
+    if (optionQty > MAX_VERTICAL_MENU_OPTION_COUNT)
+    {
+        ESP_LOGE(TAG, "Option quantity (%d) exceeds max (%d)", optionQty, MAX_VERTICAL_MENU_OPTION_COUNT);
+        optionQty = MAX_VERTICAL_MENU_OPTION_COUNT;
+    }
+
     bool ok = lvgl_port_lock(0);
     if (!ok)
     {
@@ -846,14 +862,16 @@ static void createVerticalMenuUi(ST_VerticalMenuUi *vertMenuUi, const char *menu
     lv_obj_set_style_text_font(title, lv_theme_get_font_large(vertMenuUi->screen), 0);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, UI_TITLE_Y_OFFSET_SMALL);
 
-    // Menu container (center area)
+    // Menu container (center area) - scrollable, shows max 3 options at a time
     vertMenuUi->menuContainer = lv_obj_create(vertMenuUi->screen);
     lv_obj_set_size(vertMenuUi->menuContainer, lv_pct(UI_MENU_CONTAINER_WIDTH_PCT), lv_pct(UI_MENU_CONTAINER_HEIGHT_PCT));
     lv_obj_align(vertMenuUi->menuContainer, LV_ALIGN_TOP_MID, 0, UI_MENU_CONTAINER_Y_OFFSET);
     lv_obj_set_flex_flow(vertMenuUi->menuContainer, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(vertMenuUi->menuContainer, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_flex_align(vertMenuUi->menuContainer, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_bg_opa(vertMenuUi->menuContainer, LV_OPA_TRANSP, 0);
-    lv_obj_clear_flag(vertMenuUi->menuContainer, LV_OBJ_FLAG_SCROLLABLE);
+    // Enable vertical scrolling
+    lv_obj_set_scrollbar_mode(vertMenuUi->menuContainer, LV_SCROLLBAR_MODE_AUTO);
+    lv_obj_set_scroll_dir(vertMenuUi->menuContainer, LV_DIR_VER);
 
     for (int i = 0; i < optionQty; ++i)
     {
