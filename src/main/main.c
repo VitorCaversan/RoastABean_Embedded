@@ -130,7 +130,7 @@ static void mainTask(void *arg)
                 // pid_ctrlLoopStart(tempProfile, (MAX_ROAST_TIME_IN_MIN / 4));
                 // free(tempProfile);
                 triac_setState(true);
-                DCMotor_turnFansOnForSeconds(100);
+                // DCMotor_turnFansOnForSeconds(100);
                 break;
             case BTN_2_PRESSED:
                 ESP_LOGI(TAG, "Button 2 pressed");

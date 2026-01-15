@@ -69,10 +69,10 @@ extern void pid_PIDInit(void)
 {
     ESP_LOGI(TAG, "Create PID control block");
     pid_ctrl_parameter_t pid_runtime_param = {
-        .kp = 1.0,
-        .ki = 0.04,
+        .kp = 2.2,
+        .ki = 0.8,
         .kd = 0.0,
-        .max_output   = 99.0,
+        .max_output   = 98.0,
         .min_output   = 7.0,
         .max_integral = 100.0, // Anti-windup: 80% -> +-40/0.4 ~= +-100
         .min_integral = -100.0,
@@ -125,6 +125,8 @@ extern void pid_ctrlLoopStop(void)
 
 static void pidLoopCallback(void *args)
 {
+    static uint32_t prevElapsedSecs = 0;
+
     ST_pidCtrlContext *ctx = (ST_pidCtrlContext *)args;
     pid_ctrl_block_handle_t pid_ctrl = ctx->pidCtrl;
 
@@ -138,6 +140,7 @@ static void pidLoopCallback(void *args)
     unsigned long nowUs = esp_timer_get_time();
     unsigned long elapsedUs = (nowUs - ctx->startingProcessUs);
     float targetTemp = getTargetTemperature(ctx, elapsedUs);
+    ESP_LOGI(TAG, "PID Loop: CurrTemp=%.2f °C, TargetTemp=%.2f °C", currTemp, targetTemp);
     float error = targetTemp - currTemp;
     
     float newPwrPercent = 0.0f;
@@ -150,28 +153,34 @@ static void pidLoopCallback(void *args)
 
     ST_extEventMsg screenMsg = {0};
 
-    unsigned long elapsedMins = (elapsedUs / USECONDS_IN_1_MIN);
-    if (elapsedMins >= ctx->minsToControl)
+    unsigned long elapsedSecs = US_TO_SECONDS(elapsedUs);
+    if (elapsedSecs != prevElapsedSecs) // Send every second
     {
-        screenMsg.event = EXT_EVENT_END_ROAST;
-        screenMsg.data = NULL;
-    }
-    else
-    {
-        chartUpdateData.currTargetTemp = targetTemp;
-        chartUpdateData.elapsedSecs = US_TO_SECONDS(nowUs - ctx->startingProcessUs);
-        chartUpdateData.currentTemp = currTemp;
-    
-        screenMsg.event = EXT_EVENT_UPDATE_CHART;
-        screenMsg.data = &chartUpdateData;
-    }
+        prevElapsedSecs = elapsedSecs;
+        
+        unsigned long elapsedMins = (elapsedUs / USECONDS_IN_1_MIN);
+        if (elapsedMins >= ctx->minsToControl)
+        {
+            screenMsg.event = EXT_EVENT_END_ROAST;
+            screenMsg.data = NULL;
+        }
+        else
+        {
+            chartUpdateData.currTargetTemp = targetTemp;
+            chartUpdateData.elapsedSecs = US_TO_SECONDS(nowUs - ctx->startingProcessUs);
+            chartUpdateData.currentTemp = currTemp;
+        
+            screenMsg.event = EXT_EVENT_UPDATE_CHART;
+            screenMsg.data = &chartUpdateData;
+        }
 
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    xQueueSendFromISR(OS_btnHndlrsTaskQueue, &screenMsg, &xHigherPriorityTaskWoken);
-    
-    if (xHigherPriorityTaskWoken)
-    {
-        portYIELD_FROM_ISR();
+        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+        xQueueSendFromISR(OS_btnHndlrsTaskQueue, &screenMsg, &xHigherPriorityTaskWoken);
+        
+        if (xHigherPriorityTaskWoken)
+        {
+            portYIELD_FROM_ISR();
+        }
     }
 }
 

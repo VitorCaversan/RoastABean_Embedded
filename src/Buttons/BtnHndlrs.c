@@ -365,7 +365,10 @@ static void setSelectRoastMenu(void)
         else if (i == 1)
         {
             float profile[] = {
-                30.0f
+                180.0f,
+                180.0f,
+                180.0f,
+                0.0f
             };
             
             for (j = 0; j < (sizeof(profile) / sizeof(profile[0])); j++)
@@ -375,7 +378,7 @@ static void setSelectRoastMenu(void)
 
             storedCharts[i].totalMins = j;
 
-            sprintf(storedCharts[i].chartName, "Testo rosto");
+            sprintf(storedCharts[i].chartName, "Testo Rosto");
         }
         else
         {
