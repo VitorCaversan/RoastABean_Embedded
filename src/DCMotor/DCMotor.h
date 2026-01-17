@@ -91,4 +91,11 @@ extern void DCMotor_rampSpeedUp(EN_TbBoard tbBoard,
  */
 extern void DCMotor_turnFansOnForSeconds(uint32_t seconds);
 
+/**
+ * @brief Sets the mini fan state on - TB_BOARD_2, MOTOR_B (on/off)
+ * 
+ * @param on true to turn on, false to turn off
+ */
+extern void DCMotor_setMiniFanState(bool on);
+
 #endif // DC_MOTOR_H

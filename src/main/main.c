@@ -87,6 +87,7 @@ void app_main(void)
     triac_triacInit();
     pid_PIDInit();
     DCMotor_initDcMotors();
+    DCMotor_setMiniFanState(true);
     
     vTaskDelay(pdMS_TO_TICKS(100));
     ESP_LOGI(TAG, "Restarting BLE advertising");

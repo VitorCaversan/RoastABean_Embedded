@@ -217,6 +217,22 @@ extern void DCMotor_turnFansOnForSeconds(uint32_t seconds)
     ESP_ERROR_CHECK(esp_timer_start_once(oneshotTimer, seconds * 1000000));
 }
 
+extern void DCMotor_setMiniFanState(bool on)
+{
+    ESP_LOGI(TAG, "Setting mini fan state to: %s", on ? "ON" : "OFF");
+
+    ST_motorControlContext *motorCtx = DCMotor_getContextFromMotor(TB_BOARD_2);
+
+    if (on)
+    {
+        tb6612_setSpeed(&motorCtx->motor, MOTOR_B, 100.0);
+    }
+    else
+    {
+        tb6612_setSpeed(&motorCtx->motor, MOTOR_B, 0);
+    }
+}
+
 /*******************************************************************************
  * LOCAL FUNCTIONS
  ******************************************************************************/
