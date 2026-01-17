@@ -171,7 +171,7 @@ extern void display_createMainMenu();
 /**
  * @brief Show the start menu screen
  */
-extern void display_showMainMenu(void);
+extern void display_showMainMenu(const char **optionLabels, int optionQty);
 
 /**
  * @brief Apply the selection style to the start menu UI
@@ -197,7 +197,7 @@ extern void display_createSelectRoastMenu(void);
 /**
  * @brief Show the select roast menu screen
  */
-extern void display_showSelectRoastMenu(ST_storedChart *charts, uint8_t chartCount);
+extern bool display_showSelectRoastMenu(ST_storedChart *charts, uint8_t chartCount);
 
 /**
  * @brief Get pointer to the select roast menu UI structure

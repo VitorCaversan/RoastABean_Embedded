@@ -402,12 +402,15 @@ static void setSelectRoastMenu(void)
     }
 
     size_t outLen = 0;
-    for (i = 0; i < nvs_getProfileCount(); i++)
-    {
+    
 #if NVS_DEBUG
+    for (i = 0; i < 3; i++)
+    {
         json_storedChartToJson(&storedCharts[i], buffer, 2055);
         nvs_saveRoastProfile(i, buffer, strlen(buffer));
 #else
+    for (i = 0; i < nvs_getProfileCount(); i++)
+    {
         nvs_loadRoastProfile(i, buffer, 2056, &outLen);
         json_jsonToStoredChart(buffer, &storedCharts[i]);
         ESP_LOGI(TAG, "Loaded chart %d: %s", i, buffer);
@@ -417,12 +420,13 @@ static void setSelectRoastMenu(void)
     
     free(buffer);
 
-    setBtnsCallbacks(onBackFromSelectRoast,
-                     moveSelectionUpSelectRoastMenu,
-                     moveSelectionDownSelectRoastMenu,
-                     onSelectSelectRoastMenu);
-
-    display_showSelectRoastMenu(storedCharts, nvs_getProfileCount());
+    if (display_showSelectRoastMenu(storedCharts, nvs_getProfileCount()))
+    {
+        setBtnsCallbacks(onBackFromSelectRoast,
+                        moveSelectionUpSelectRoastMenu,
+                        moveSelectionDownSelectRoastMenu,
+                        onSelectSelectRoastMenu);
+    }
 }
 
 static void moveSelectionUpSelectRoastMenu(void)
@@ -506,7 +510,7 @@ static void onBackFromSelectRoast(void)
                      moveSelectionDownMainMenu,
                      onSelectMainMenu);
     
-    display_showMainMenu();
+    display_showMainMenu(NULL, 0);
 }
 
 static void createConfirmationPopupWithHndlrs(const char *message,
@@ -559,7 +563,7 @@ static void onConfirmEndRoast(void)
                      moveSelectionDownMainMenu,
                      onSelectMainMenu);
 
-    display_showMainMenu();
+    display_showMainMenu(NULL, 0);
 
     tempSens_resumeTask();
 }
@@ -629,7 +633,7 @@ static void endRoast(void)
                      moveSelectionDownMainMenu,
                      onSelectMainMenu);
 
-    display_showMainMenu();
+    display_showMainMenu(NULL, 0);
 }
 
 static void create5sTimerToStartRoastPopup(void *arg)
@@ -707,7 +711,7 @@ static void onCancelTimer(void)
                      moveSelectionDownMainMenu,
                      onSelectMainMenu);
 
-    display_showMainMenu();
+    display_showMainMenu(NULL, 0);
 }
 
 static void scheduleRoastToStart(uint32_t delaySecs)

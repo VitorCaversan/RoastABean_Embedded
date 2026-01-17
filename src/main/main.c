@@ -73,7 +73,7 @@ void app_main(void)
     display_uiInit();
     display_createMainMenu();
     display_createSelectRoastMenu();
-    display_showMainMenu();
+    display_showMainMenu(NULL, 0);
     tempSens_init();
     
     ESP_LOGI(TAG, "Stopping BLE advertising for triac init");

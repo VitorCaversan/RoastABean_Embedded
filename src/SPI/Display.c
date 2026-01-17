@@ -66,6 +66,19 @@ static const char *formatTime(uint32_t totalSecs, char *buf, size_t bufSize);
 static lv_obj_t *makeMenuOption(lv_obj_t *parent, const char *text);
 
 /**
+ * @brief Populate or update menu options for a vertical menu
+ * 
+ * @param vertMenuUi Pointer to the vertical menu UI structure
+ * @param optionLabels Array of option labels. Each label is a \0 terminated string with a 32
+ * character max length. If NULL, dummy labels will be used.
+ * @param optionQty Number of options
+ * 
+ * @note This function handles both creating new options and updating existing ones.
+ * If the option count changes, it will recreate all options. Assumes LVGL lock is held.
+ */
+static void populateVerticalMenuOptions(ST_VerticalMenuUi *vertMenuUi, const char **optionLabels, int optionQty);
+
+/**
  * @brief Create a Vertical Menu Ui object
  * 
  * @param vertMenuUi Pointer to the vertical menu UI structure to initialize
@@ -580,8 +593,13 @@ extern void display_applySelectionStyle(ST_VerticalMenuUi *ui, int optionQty)
     lvgl_port_unlock();
 }
 
-extern void display_showMainMenu(void)
+extern void display_showMainMenu(const char **optionLabels, int optionQty)
 {
+    if ((optionLabels != NULL) && (optionQty > 0))
+    {
+        populateVerticalMenuOptions(&mainMenuUi, optionLabels, optionQty);
+    }
+
     if (mainMenuUi.screen != NULL) {
         bool ok = lvgl_port_lock(0);
         if (!ok) { return; }
@@ -600,35 +618,38 @@ extern void display_createSelectRoastMenu(void)
     createVerticalMenuUi(&selectRoastMenuUi, "Select Roast Profile", NULL, nvs_getProfileCount());
 }
 
-extern void display_showSelectRoastMenu(ST_storedChart *charts, uint8_t chartCount)
+extern bool display_showSelectRoastMenu(ST_storedChart *charts, uint8_t chartCount)
 {
     if (chartCount > MAX_VERTICAL_MENU_OPTION_COUNT)
     {
-        ESP_LOGE(TAG, "Chart count (%d) exceeds max menu options (%d)", chartCount, MAX_VERTICAL_MENU_OPTION_COUNT);
+        ESP_LOGW(TAG, "Chart count (%d) exceeds max menu options (%d)", chartCount, MAX_VERTICAL_MENU_OPTION_COUNT);
         chartCount = MAX_VERTICAL_MENU_OPTION_COUNT;
+    }
+
+    if (chartCount == 0)
+    {
+        ESP_LOGW(TAG, "No charts to display");
+        return false;
     }
 
     if (selectRoastMenuUi.screen != NULL)
     {
-        bool ok = lvgl_port_lock(0);
-        if (!ok) { return; }
+        const char *optionLabels[MAX_VERTICAL_MENU_OPTION_COUNT];
         
-        // Update menu labels with chart names
-        for (int i = 0; ((i < chartCount) && (i < MAX_VERTICAL_MENU_OPTION_COUNT)); ++i)
+        for (int i = 0; i < chartCount; ++i)
         {
-            if (selectRoastMenuUi.menuOptions[i] != NULL)
-            {
-                lv_obj_t *label = lv_obj_get_child(selectRoastMenuUi.menuOptions[i], 0);
-                if (label != NULL)
-                {
-                    lv_label_set_text(label, charts[i].chartName);
-                }
-            }
+            optionLabels[i] = charts[i].chartName;
         }
         
+        populateVerticalMenuOptions(&selectRoastMenuUi, optionLabels, chartCount);
+
+        int ok = lvgl_port_lock(0);
+        if (!ok) { return false; }
         lv_scr_load(selectRoastMenuUi.screen);
         lvgl_port_unlock();
     }
+
+    return true;
 }
 
 extern ST_VerticalMenuUi *display_getSelectRoastMenuUi(void)
@@ -810,6 +831,73 @@ static lv_obj_t *makeMenuOption(lv_obj_t *parent, const char *text)
     return btn;
 }
 
+static void populateVerticalMenuOptions(ST_VerticalMenuUi *vertMenuUi, const char **optionLabels, int optionQty)
+{
+    if (optionQty > MAX_VERTICAL_MENU_OPTION_COUNT)
+    {
+        ESP_LOGE(TAG, "Option quantity (%d) exceeds max (%d)", optionQty, MAX_VERTICAL_MENU_OPTION_COUNT);
+        optionQty = MAX_VERTICAL_MENU_OPTION_COUNT;
+    }
+
+    // Count existing options
+    int existingCount = 0;
+    for (int i = 0; i < MAX_VERTICAL_MENU_OPTION_COUNT; ++i)
+    {
+        if (vertMenuUi->menuOptions[i] != NULL)
+        {
+            existingCount++;
+        }
+        else
+        {
+            break;
+        }
+    }
+    
+    // Check if we need to recreate options (different count)
+    bool needsRecreate = (existingCount != optionQty);
+
+    bool ok = lvgl_port_lock(0);
+    if (!ok) { return; }
+    
+    if (needsRecreate)
+    {
+        // Delete old options
+        for (int i = 0; i < MAX_VERTICAL_MENU_OPTION_COUNT; ++i)
+        {
+            if (vertMenuUi->menuOptions[i] != NULL)
+            {
+                lv_obj_del(vertMenuUi->menuOptions[i]);
+                vertMenuUi->menuOptions[i] = NULL;
+            }
+        }
+        
+        // Create new options
+        for (int i = 0; i < optionQty; ++i)
+        {
+            vertMenuUi->menuOptions[i] = makeMenuOption(vertMenuUi->menuContainer,
+                                                        ((NULL != optionLabels) ? optionLabels[i] : "Dummy"));
+            lv_obj_add_style(vertMenuUi->menuOptions[i], &vertMenuUi->styleItem, 0);
+        }
+    }
+    else
+    {
+        // Just update existing labels
+        for (int i = 0; i < optionQty; ++i)
+        {
+            if (vertMenuUi->menuOptions[i] != NULL)
+            {
+                lv_obj_t *label = lv_obj_get_child(vertMenuUi->menuOptions[i], 0);
+                if (label != NULL && optionLabels != NULL)
+                {
+                    lv_label_set_text(label, optionLabels[i]);
+                }
+            }
+        }
+    }
+
+    lvgl_port_unlock();
+}
+
 static void createVerticalMenuUi(ST_VerticalMenuUi *vertMenuUi, const char *menuTitle, const char **optionLabels, int optionQty)
 {
     if (optionQty > MAX_VERTICAL_MENU_OPTION_COUNT)
@@ -873,12 +961,8 @@ static void createVerticalMenuUi(ST_VerticalMenuUi *vertMenuUi, const char *menu
     lv_obj_set_scrollbar_mode(vertMenuUi->menuContainer, LV_SCROLLBAR_MODE_AUTO);
     lv_obj_set_scroll_dir(vertMenuUi->menuContainer, LV_DIR_VER);
 
-    for (int i = 0; i < optionQty; ++i)
-    {
-        vertMenuUi->menuOptions[i] = makeMenuOption(vertMenuUi->menuContainer,
-                                                    ((NULL != optionLabels) ? optionLabels[i] : "Dummy"));
-        lv_obj_add_style(vertMenuUi->menuOptions[i], &vertMenuUi->styleItem, 0);
-    }
+    // Populate menu options
+    populateVerticalMenuOptions(vertMenuUi, optionLabels, optionQty);
 
     // Bottom bar with 4 fixed buttons
     lv_style_reset(&vertMenuUi->styleBottomBar);
