@@ -300,7 +300,7 @@ static void onSelectMainMenu(void)
         break;
         case 1: // "Manage Roast Curves"
             ESP_LOGI(TAG, "Managing roast curves...");
-            nvs_eraseAllProfiles();
+            // nvs_eraseAllProfiles();
             // TODO: Navigate to roast curves management screen
         break;
         case 2: // "Connect"
