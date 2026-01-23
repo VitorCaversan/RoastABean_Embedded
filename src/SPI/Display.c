@@ -608,6 +608,50 @@ extern void display_showMainMenu(const char **optionLabels, int optionQty)
     }
 }
 
+extern void display_updateBottomBarButton(lv_obj_t *btn, const char *label)
+{
+    if (btn == NULL) return;
+
+    bool ok = lvgl_port_lock(0);
+    if (!ok) { return; }
+
+    lv_obj_t *lbl = lv_obj_get_child(btn, 0); // Assuming label is the first child
+    if (lbl != NULL && lv_obj_check_type(lbl, &lv_label_class))
+    {
+        lv_label_set_text(lbl, label);
+        lv_obj_center(lbl);
+    }
+
+    lvgl_port_unlock();
+}
+
+extern void display_setVerticalMenuTitle(ST_VerticalMenuUi *ui, const char *title)
+{
+    if (ui == NULL) return;
+
+    if (strlen(title) > 32)
+    {
+        ESP_LOGW(TAG, "Menu title too long, truncating to 32 characters");
+    }
+
+    bool ok = lvgl_port_lock(0);
+    if (!ok) { return; }
+
+    lv_obj_t *titleObj = lv_obj_get_child(ui->screen, 0); // Assuming title is the first child
+    if (titleObj == NULL || !lv_obj_check_type(titleObj, &lv_label_class))
+    {
+        ESP_LOGW(TAG, "Menu title object not found or invalid");
+        lvgl_port_unlock();
+        return;
+    }
+    
+    lv_label_set_text(titleObj, title);
+    lv_obj_set_style_text_font(titleObj, lv_theme_get_font_large(ui->screen), 0);
+    lv_obj_align(titleObj, LV_ALIGN_TOP_MID, 0, UI_TITLE_Y_OFFSET_SMALL);
+
+    lvgl_port_unlock();
+}
+
 extern ST_VerticalMenuUi *display_getMainMenuUi(void)
 {
     return &mainMenuUi;
@@ -615,7 +659,7 @@ extern ST_VerticalMenuUi *display_getMainMenuUi(void)
 
 extern void display_createSelectRoastMenu(void)
 {
-    createVerticalMenuUi(&selectRoastMenuUi, "Select Roast Profile", NULL, nvs_getProfileCount());
+    createVerticalMenuUi(&selectRoastMenuUi, SELECT_ROAST_MENU_TITLE, NULL, nvs_getProfileCount());
 }
 
 extern bool display_showSelectRoastMenu(ST_storedChart *charts, uint8_t chartCount)

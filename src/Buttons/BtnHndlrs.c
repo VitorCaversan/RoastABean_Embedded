@@ -45,12 +45,16 @@ static void setBtnsCallbacks(void (*onBtn1Pressed)(void),
  * Functions: moveSelectionUpMainMenu(),
  * moveSelectionDownMainMenu(),
  * onSelectMainMenu(),
- * setSelectRoastMenu().
+ * setSelectRoastMenu(),
+ * onGoToSelectRoastCurves(),
+ * onGoToManageRoastCurves(),
  */
 static void moveSelectionUpMainMenu(void);
 static void moveSelectionDownMainMenu(void);
 static void onSelectMainMenu(void);
 static void setSelectRoastMenu(void);
+static void onGoToSelectRoastCurves(void);
+static void onGoToManageRoastCurves(void);
 static void moveSelection(ST_VerticalMenuUi *ui, int delta, int optionQty);
 
 /**
@@ -70,6 +74,18 @@ static void onSelectSelectRoastMenu(void);
 static void onConfirmStartRoast(void);
 static void onCancelStartRoast(void);
 static void onBackFromSelectRoast(void);
+
+/**
+ * @defgroup ManageRoastCurvesButtons button handlers
+ * @brief Handlers for confirming or cancelling the erase of a roast profile.
+ * 
+ * Functions: onEraseChart(),
+ * onConfirmEraseChart(),
+ * onCancelEraseChart().
+ */
+static void onEraseChart(void);
+static void onConfirmEraseChart(void);
+static void onCancelEraseChart(void);
 
 /**
  * @defgroup EndRoastButtons End roast button handlers
@@ -296,12 +312,15 @@ static void onSelectMainMenu(void)
     {
         case 0: // "Roast"
             ESP_LOGI(TAG, "Going to select roast...");
-            setSelectRoastMenu();
+            onGoToSelectRoastCurves();
         break;
         case 1: // "Manage Roast Curves"
+#if NVS_DEBUG
+            nvs_eraseAllProfiles();
+#else
             ESP_LOGI(TAG, "Managing roast curves...");
-            // nvs_eraseAllProfiles();
-            // TODO: Navigate to roast curves management screen
+            onGoToManageRoastCurves();
+#endif
         break;
         case 2: // "Connect"
             ESP_LOGI(TAG, "Connecting...");
@@ -419,6 +438,13 @@ static void setSelectRoastMenu(void)
     }
     
     free(buffer);
+}
+
+static void onGoToSelectRoastCurves(void)
+{
+    display_updateBottomBarButton(display_getSelectRoastMenuUi()->btnSelect, LV_SYMBOL_OK);
+    display_setVerticalMenuTitle(display_getSelectRoastMenuUi(), SELECT_ROAST_MENU_TITLE);
+    setSelectRoastMenu();
 
     if (display_showSelectRoastMenu(storedCharts, nvs_getProfileCount()))
     {
@@ -426,6 +452,21 @@ static void setSelectRoastMenu(void)
                         moveSelectionUpSelectRoastMenu,
                         moveSelectionDownSelectRoastMenu,
                         onSelectSelectRoastMenu);
+    }
+}
+
+static void onGoToManageRoastCurves(void)
+{
+    display_updateBottomBarButton(display_getSelectRoastMenuUi()->btnSelect, LV_SYMBOL_TRASH);
+    display_setVerticalMenuTitle(display_getSelectRoastMenuUi(), MANAGE_ROAST_MENU_TITLE);
+    setSelectRoastMenu();
+
+    if (display_showSelectRoastMenu(storedCharts, nvs_getProfileCount()))
+    {
+        setBtnsCallbacks(onBackFromSelectRoast,
+                        moveSelectionUpSelectRoastMenu,
+                        moveSelectionDownSelectRoastMenu,
+                        onEraseChart);
     }
 }
 
@@ -486,7 +527,7 @@ static void onConfirmStartRoast(void)
     display_showRoastChart();
     pid_ctrlLoopStart(selectedChart->tempProfile, selectedChart->totalMins);
 
-    DCMotor_rampSpeedUp(TB_BOARD_1, MOTOR_A, 0, 30, 8);
+    DCMotor_rampSpeedUp(TB_BOARD_1, MOTOR_A, 0, 50, 8);
 }
 
 static void onCancelStartRoast(void)
@@ -512,6 +553,53 @@ static void onBackFromSelectRoast(void)
     
     display_showMainMenu(NULL, 0);
 }
+
+static void onEraseChart(void)
+{
+    ESP_LOGI(TAG, "Erase chart selected");
+    
+    char message[128] = {0};
+    ST_VerticalMenuUi *ui = display_getSelectRoastMenuUi();
+    ST_storedChart *selectedChart = &storedCharts[ui->selectedIndex];
+    snprintf(message, sizeof(message), "Are you sure to erase\n%s?", selectedChart->chartName);
+    createConfirmationPopupWithHndlrs(message,
+                                      onConfirmEraseChart,
+                                      onCancelEraseChart,
+                                      lv_palette_main(LV_PALETTE_NONE));
+}
+
+static void onConfirmEraseChart(void)
+{
+    ESP_LOGI(TAG, "Erase chart confirmed!");
+
+    tempSens_suspendTask();
+
+    display_hideConfirmationPopup();
+
+    ST_VerticalMenuUi *ui = display_getSelectRoastMenuUi();
+    nvs_deleteRoastProfile(ui->selectedIndex);
+
+    onGoToManageRoastCurves();
+
+    tempSens_resumeTask();
+}
+
+static void onCancelEraseChart(void)
+{
+    ESP_LOGI(TAG, "Erase chart cancelled");
+
+    tempSens_suspendTask();
+
+    display_hideConfirmationPopup();
+    
+    setBtnsCallbacks(onBackFromSelectRoast,
+                     moveSelectionUpSelectRoastMenu,
+                     moveSelectionDownSelectRoastMenu,
+                     onEraseChart);
+
+    tempSens_resumeTask();
+}
+
 
 static void createConfirmationPopupWithHndlrs(const char *message,
                                               void (*onConfirm)(void),

@@ -183,8 +183,17 @@ extern esp_err_t nvs_loadRoastProfile(uint8_t profileId, char *data, size_t maxL
 
 extern esp_err_t nvs_deleteRoastProfile(uint8_t profileId)
 {
-    char key[NVS_MAX_KEY_LENGTH + 1];
-    buildProfileKey(profileId, key);
+    if (profileId >= MAX_CHARTS_TO_STORE)
+    {
+        ESP_LOGE(TAG, "Profile ID %d exceeds max allowed %d", profileId, MAX_CHARTS_TO_STORE - 1);
+        return ESP_ERR_INVALID_ARG;
+    }
+    
+    if (!nvs_profileExists(profileId))
+    {
+        ESP_LOGW(TAG, "Profile %d does not exist", profileId);
+        return ESP_ERR_NVS_NOT_FOUND;
+    }
     
     nvs_handle_t handle;
     esp_err_t ret = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &handle);
@@ -194,15 +203,48 @@ extern esp_err_t nvs_deleteRoastProfile(uint8_t profileId)
         return ret;
     }
     
-    ret = nvs_erase_key(handle, key);
-    if (ret != ESP_OK)
+    // Shift all profiles after the deleted one down by one slot
+    // This keeps profile IDs contiguous (no gaps)
+    uint8_t tempBuffer[NVS_MAX_PROFILE_SIZE];
+    for (uint8_t i = profileId; i < nvs_getProfileCount() - 1; i++)
     {
-        if (ret != ESP_ERR_NVS_NOT_FOUND)
+        char sourceKey[NVS_MAX_KEY_LENGTH + 1] = {0};
+        char destKey[NVS_MAX_KEY_LENGTH + 1] = {0};
+        buildProfileKey(i + 1, sourceKey);
+        buildProfileKey(i, destKey);
+        
+        size_t requiredSize = NVS_MAX_PROFILE_SIZE;
+        ret = nvs_get_blob(handle, sourceKey, tempBuffer, &requiredSize);
+        
+        if (ret == ESP_OK)
         {
-            ESP_LOGE(TAG, "Failed to delete profile %d: %s", profileId, esp_err_to_name(ret));
+            ret = nvs_set_blob(handle, destKey, tempBuffer, requiredSize);
+            if (ret != ESP_OK)
+            {
+                ESP_LOGE(TAG, "Failed to shift profile %d to %d: %s", i + 1, i, esp_err_to_name(ret));
+                nvs_close(handle);
+                return ret;
+            }
         }
-        nvs_close(handle);
-        return ret;
+        else if (ret == ESP_ERR_NVS_NOT_FOUND)
+        {
+            nvs_erase_key(handle, destKey);
+            break;
+        }
+        else
+        {
+            ESP_LOGE(TAG, "Failed to read profile %d: %s", i + 1, esp_err_to_name(ret));
+            nvs_close(handle);
+            return ret;
+        }
+    }
+    
+    // Erase the last slot (it's now a duplicate of the second-to-last)
+    if (profileCount > 0)
+    {
+        char lastKey[NVS_MAX_KEY_LENGTH + 1];
+        buildProfileKey(profileCount - 1, lastKey);
+        nvs_erase_key(handle, lastKey);
     }
     
     ret = nvs_commit(handle);
@@ -216,7 +258,7 @@ extern esp_err_t nvs_deleteRoastProfile(uint8_t profileId)
     
     updateProfileCount();
     
-    ESP_LOGI(TAG, "Profile %d deleted successfully", profileId);
+    ESP_LOGI(TAG, "Profile %d deleted and profiles compacted successfully", profileId);
     return ESP_OK;
 }
 

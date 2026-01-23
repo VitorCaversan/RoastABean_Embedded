@@ -39,6 +39,9 @@
 
 #define MAIN_MENU_OPTION_COUNT      3
 
+#define SELECT_ROAST_MENU_TITLE    "Select Roast Curve"
+#define MANAGE_ROAST_MENU_TITLE   "Manage Roast Curves"
+
 /*******************************************************************************
  * TYPEDEFS AND STRUCTURES
  ******************************************************************************/
@@ -180,6 +183,22 @@ extern void display_showMainMenu(const char **optionLabels, int optionQty);
  * @param optionQty Number of menu options available
  */
 extern void display_applySelectionStyle(ST_VerticalMenuUi *ui, int optionQty);
+
+/**
+ * @brief Updates given button in the bottom bar of a menu or chart UI with the given parameters
+ * 
+ * @param btn Pointer to the button object to update
+ * @param label The text label to set on the button
+ */
+extern void display_updateBottomBarButton(lv_obj_t *btn, const char *label);
+
+/**
+ * @brief Set the title of a vertical menu UI
+ * 
+ * @param ui Pointer to the vertical menu UI structure
+ * @param title The title string to set. A \0 terminated string with a 32 character max length
+ */
+extern void display_setVerticalMenuTitle(ST_VerticalMenuUi *ui, const char *title);
 
 /**
  * @brief Get pointer to the start menu UI structure
