@@ -591,8 +591,6 @@ static void onConfirmEraseChart(void)
 {
     ESP_LOGI(TAG, "Erase chart confirmed!");
 
-    tempSens_suspendTask();
-
     display_hideConfirmationPopup();
 
     ST_VerticalMenuUi *ui = display_getSelectRoastMenuUi();
@@ -604,8 +602,6 @@ static void onConfirmEraseChart(void)
 static void onCancelEraseChart(void)
 {
     ESP_LOGI(TAG, "Erase chart cancelled");
-
-    tempSens_suspendTask();
 
     display_hideConfirmationPopup();
     
@@ -623,22 +619,20 @@ static void createConfirmationPopupWithHndlrs(const char *message,
 {
     setBtnsCallbacks(onCancel, NULL, NULL, onConfirm);
     
-    tempSens_suspendTask();
-    
     display_createConfirmationPopup(message, currScrBckgnd);
     display_showConfirmationPopup();
-    
-    tempSens_resumeTask();
 }
 
 static void onBackFromRoast(void)
 {
+    tempSens_suspendTask();
     char message[128] = {0};
     snprintf(message, sizeof(message), "Are you sure to end the roast?");
     createConfirmationPopupWithHndlrs(message,
                                       onConfirmEndRoast,
                                       onCancelEndRoast,
                                       lv_palette_main(LV_PALETTE_NONE));
+    tempSens_resumeTask();
 }
 
 static void onConfirmEndRoast(void)
@@ -660,14 +654,27 @@ static void onConfirmEndRoast(void)
     vTaskDelay(pdMS_TO_TICKS(500));
     tb6612_setSpeed(&motorCtrlCtx->motor, MOTOR_A, 0);
 
+    ST_VerticalMenuUi *ui = display_getSelectRoastMenuUi();
+    ST_storedChart *selectedChart = &storedCharts[ui->selectedIndex];
+
+    printf("Target roast profile for %s:\n", selectedChart->chartName);
+    uint32_t i;
+    for (i = 0; i < selectedChart->totalPoints; i++)
+    {
+        printf("%.2f\n", selectedChart->tempProfile[i]);
+    }
+    printf("Roast profile achieved\n");
+    for (i = 0; i < selectedChart->totalPoints; i++)
+    {
+        printf("%.2f\n", selectedChart->achievedProfile[i]);
+    }
+
     setBtnsCallbacks(NULL,
                      moveSelectionUpMainMenu,
                      moveSelectionDownMainMenu,
                      onSelectMainMenu);
 
     display_showMainMenu(NULL, 0);
-
-    tempSens_resumeTask();
 }
 
 static void onCancelEndRoast(void)
