@@ -88,7 +88,7 @@ extern void pid_ctrlLoopStart(float *tempProfile, uint32_t minsToControl)
 {
     pidRoastCtrlBlock.startingProcessUs = esp_timer_get_time();
     pidRoastCtrlBlock.minsToControl = minsToControl;
-    memcpy(pidRoastCtrlBlock.tempProfile, tempProfile, minsToControl * sizeof(float));
+    memcpy(pidRoastCtrlBlock.tempProfile, tempProfile, ((minsToControl + 1) * sizeof(float)));
 
     ESP_LOGI(TAG, "Create a timer to do PID calculation periodically");
     const esp_timer_create_args_t periodic_timer_args = {
@@ -155,24 +155,22 @@ static void pidLoopCallback(void *args)
     {
         prevElapsedSecs = elapsedSecs;
         
+        chartUpdateData.currTargetTemp = targetTemp;
+        chartUpdateData.elapsedSecs = US_TO_SECONDS(nowUs - ctx->startingProcessUs);
+        chartUpdateData.currentTemp = currTemp;
+    
+        screenMsg.event = EXT_EVENT_UPDATE_CHART;
+        screenMsg.data = &chartUpdateData;
+
+        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+        xQueueSendFromISR(OS_btnHndlrsTaskQueue, &screenMsg, &xHigherPriorityTaskWoken);
+
         unsigned long elapsedMins = (elapsedUs / USECONDS_IN_1_MIN);
         if (elapsedMins >= ctx->minsToControl)
         {
             screenMsg.event = EXT_EVENT_END_ROAST;
-            screenMsg.data = NULL;
+            xQueueSendFromISR(OS_btnHndlrsTaskQueue, &screenMsg, &xHigherPriorityTaskWoken);
         }
-        else
-        {
-            chartUpdateData.currTargetTemp = targetTemp;
-            chartUpdateData.elapsedSecs = US_TO_SECONDS(nowUs - ctx->startingProcessUs);
-            chartUpdateData.currentTemp = currTemp;
-        
-            screenMsg.event = EXT_EVENT_UPDATE_CHART;
-            screenMsg.data = &chartUpdateData;
-        }
-
-        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-        xQueueSendFromISR(OS_btnHndlrsTaskQueue, &screenMsg, &xHigherPriorityTaskWoken);
         
         if (xHigherPriorityTaskWoken)
         {
@@ -184,9 +182,9 @@ static void pidLoopCallback(void *args)
 static float getTargetTemperature(ST_pidCtrlContext *ctx, unsigned long usSinceStart)
 {
     unsigned long minsSinceStart = usSinceStart / USECONDS_IN_1_MIN;
-    if (minsSinceStart >= ctx->minsToControl - 1)
+    if (minsSinceStart >= ctx->minsToControl)
     {
-        return ctx->tempProfile[ctx->minsToControl - 1];
+        return ctx->tempProfile[ctx->minsToControl];
     }
 
     float lowerTemp = ctx->tempProfile[minsSinceStart];

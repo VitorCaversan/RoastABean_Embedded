@@ -56,11 +56,11 @@ extern bool json_jsonToStoredChart(const char *jsonStr, ST_storedChart *chart)
     // Parse pointsQuantity
     cJSON *pointsQuantity = cJSON_GetObjectItem(root, "pointsQuantity");
     if (cJSON_IsNumber(pointsQuantity)) {
-        chart->totalMins = (uint32_t)pointsQuantity->valueint;
-        if (chart->totalMins > MAX_ROAST_TIME_IN_MIN) {
+        chart->totalPoints = (uint32_t)pointsQuantity->valueint;
+        if (chart->totalPoints > MAX_ROAST_TIME_IN_MIN) {
             ESP_LOGW(TAG, "pointsQuantity (%lu) exceeds MAX_ROAST_TIME_IN_MIN (%d), truncating",
-                     chart->totalMins, MAX_ROAST_TIME_IN_MIN);
-            chart->totalMins = MAX_ROAST_TIME_IN_MIN;
+                     chart->totalPoints, MAX_ROAST_TIME_IN_MIN);
+            chart->totalPoints = MAX_ROAST_TIME_IN_MIN;
         }
     } else {
         ESP_LOGE(TAG, "pointsQuantity not found or invalid");
@@ -72,12 +72,12 @@ extern bool json_jsonToStoredChart(const char *jsonStr, ST_storedChart *chart)
         cJSON *temperatures = cJSON_GetObjectItem(root, "temperatures");
         if (cJSON_IsArray(temperatures)) {
             int arraySize = cJSON_GetArraySize(temperatures);
-            if (arraySize != (int)chart->totalMins) {
+            if (arraySize != (int)chart->totalPoints) {
                 ESP_LOGW(TAG, "temperatures array size (%d) doesn't match pointsQuantity (%lu)",
-                         arraySize, chart->totalMins);
+                         arraySize, chart->totalPoints);
             }
 
-            int minSize = (arraySize < (int)chart->totalMins) ? arraySize : (int)chart->totalMins;
+            int minSize = (arraySize < (int)chart->totalPoints) ? arraySize : (int)chart->totalPoints;
             for (int i = 0; i < minSize; i++) {
                 cJSON *temp = cJSON_GetArrayItem(temperatures, i);
                 if (cJSON_IsNumber(temp)) {
@@ -89,7 +89,7 @@ extern bool json_jsonToStoredChart(const char *jsonStr, ST_storedChart *chart)
             }
 
             // Fill remaining with zeros if array was shorter
-            for (int i = minSize; i < (int)chart->totalMins; i++) {
+            for (int i = minSize; i < (int)chart->totalPoints; i++) {
                 chart->tempProfile[i] = 0.0f;
             }
         } else {
@@ -102,12 +102,12 @@ extern bool json_jsonToStoredChart(const char *jsonStr, ST_storedChart *chart)
         cJSON *achievedTemp = cJSON_GetObjectItem(root, "achievedTemperatures");
         if (cJSON_IsArray(achievedTemp)) {
             int arraySize = cJSON_GetArraySize(achievedTemp);
-            if (arraySize != (int)chart->totalMins) {
+            if (arraySize != (int)chart->totalPoints) {
                 ESP_LOGW(TAG, "achievedTemp array size (%d) doesn't match pointsQuantity (%lu)",
-                         arraySize, chart->totalMins);
+                         arraySize, chart->totalPoints);
             }
 
-            int minSize = (arraySize < (int)chart->totalMins) ? arraySize : (int)chart->totalMins;
+            int minSize = (arraySize < (int)chart->totalPoints) ? arraySize : (int)chart->totalPoints;
             for (int i = 0; i < minSize; i++) {
                 cJSON *temp = cJSON_GetArrayItem(achievedTemp, i);
                 if (cJSON_IsNumber(temp)) {
@@ -119,12 +119,12 @@ extern bool json_jsonToStoredChart(const char *jsonStr, ST_storedChart *chart)
             }
 
             // Fill remaining with zeros if array was shorter
-            for (int i = minSize; i < (int)chart->totalMins; i++) {
+            for (int i = minSize; i < (int)chart->totalPoints; i++) {
                 chart->achievedProfile[i] = 0.0f;
             }
         } else {
-            for (uint32_t i = 0; i < chart->totalMins; i++){
-                chart->achievedProfile[i] = NAN;
+            for (uint32_t i = 0; i < chart->totalPoints; i++){
+                chart->achievedProfile[i] = 0.0f;
             }
             ESP_LOGW(TAG, "achievedTemp array not found or invalid");
         }
@@ -173,7 +173,7 @@ extern bool json_jsonToStoredChart(const char *jsonStr, ST_storedChart *chart)
 
     if (success) {
         ESP_LOGI(TAG, "Successfully parsed chart: '%s' with %lu points", 
-                 chart->chartName, chart->totalMins);
+                 chart->chartName, chart->totalPoints);
     }
 
     cJSON_Delete(root);
@@ -203,7 +203,7 @@ extern bool json_storedChartToJson(const ST_storedChart *chart, char *jsonStr, s
     }
 
     // Add pointsQuantity
-    if (success && cJSON_AddNumberToObject(root, "pointsQuantity", chart->totalMins) == NULL) {
+    if (success && cJSON_AddNumberToObject(root, "pointsQuantity", chart->totalPoints) == NULL) {
         ESP_LOGE(TAG, "Failed to add pointsQuantity");
         success = false;
     }
@@ -236,7 +236,7 @@ extern bool json_storedChartToJson(const ST_storedChart *chart, char *jsonStr, s
         }
     }
     if (success) {
-        for (uint32_t i = 0; i < chart->totalMins && i < MAX_ROAST_TIME_IN_MIN; i++) {
+        for (uint32_t i = 0; i < chart->totalPoints && i < MAX_ROAST_TIME_IN_MIN; i++) {
             cJSON *temp = cJSON_CreateNumber(chart->tempProfile[i]);
             if (temp == NULL) {
                 ESP_LOGE(TAG, "Failed to create temperature number at index %lu", i);
@@ -259,7 +259,7 @@ extern bool json_storedChartToJson(const ST_storedChart *chart, char *jsonStr, s
         }
     }
     if (success) {
-        for (uint32_t i = 0; i < chart->totalMins && i < MAX_ROAST_TIME_IN_MIN; i++) {
+        for (uint32_t i = 0; i < chart->totalPoints && i < MAX_ROAST_TIME_IN_MIN; i++) {
             cJSON *temp = cJSON_CreateNumber(chart->achievedProfile[i]);
             if (temp == NULL) {
                 ESP_LOGE(TAG, "Failed to create achieved temperature number at index %lu", i);

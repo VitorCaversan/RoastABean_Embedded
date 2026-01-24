@@ -75,6 +75,8 @@ void app_main(void)
     display_createSelectRoastMenu();
     display_showMainMenu(NULL, 0);
     tempSens_init();
+    vTaskDelay(pdMS_TO_TICKS(100));
+    tempSens_suspendTask();
     
     ESP_LOGI(TAG, "Stopping BLE advertising for triac init");
     bluetooth_stopAdvertising();

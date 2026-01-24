@@ -332,15 +332,15 @@ extern void display_uiStatusBarUpdate(bool ethUp, float tempC, int pwm, bool fau
     lvgl_port_unlock();
 }
 
-extern void display_createRoastChart(const float *profile, uint32_t totalMins, float yMin, float yMax)
+extern void display_createRoastChart(const float *profile, uint32_t totalPoints, float yMin, float yMax)
 {
-    if (totalMins == 0 || totalMins > MAX_ROAST_TIME_IN_MIN)
-        totalMins = MAX_ROAST_TIME_IN_MIN;
+    if (totalPoints == 0 || totalPoints > MAX_ROAST_TIME_IN_MIN)
+        totalPoints = MAX_ROAST_TIME_IN_MIN;
 
     bool ok = lvgl_port_lock(0);
     if (!ok) { return; }
 
-    roastChartUi.totalMins = totalMins;
+    roastChartUi.totalPoints = totalPoints;
 
     if (isfinite(yMin) && isfinite(yMax) && (yMax > yMin))
     {
@@ -349,28 +349,28 @@ extern void display_createRoastChart(const float *profile, uint32_t totalMins, f
     }
     else
     {
-        computeYRangeFromProfile(profile, totalMins, &roastChartUi.yMin, &roastChartUi.yMax);
+        computeYRangeFromProfile(profile, totalPoints, &roastChartUi.yMin, &roastChartUi.yMax);
     }
 
     // If chart already exists, just update the data
     if (roastChartUi.screen != NULL && roastChartUi.chart != NULL)
     {
         // Update chart point count if needed
-        lv_chart_set_point_count(roastChartUi.chart, totalMins);
+        lv_chart_set_point_count(roastChartUi.chart, totalPoints);
         
         // Update Y and X ranges
         lv_chart_set_range(roastChartUi.chart, LV_CHART_AXIS_PRIMARY_Y, toChartCoord(roastChartUi.yMin), toChartCoord(roastChartUi.yMax));
-        lv_chart_set_range(roastChartUi.chart, LV_CHART_AXIS_PRIMARY_X, toChartCoord(0), toChartCoord(totalMins - 1));
+        lv_chart_set_range(roastChartUi.chart, LV_CHART_AXIS_PRIMARY_X, toChartCoord(0), toChartCoord(totalPoints - 1));
         
         // Update target profile data
-        for (uint32_t m = 0; m < totalMins; ++m)
+        for (uint32_t m = 0; m < totalPoints; ++m)
         {
             float v = isfinite(profile[m]) ? profile[m] : NAN;
             lv_chart_set_value_by_id(roastChartUi.chart, roastChartUi.seriesTarget, m, isfinite(v) ? toChartCoord(v) : LV_CHART_POINT_NONE);
         }
         
         // Reset current series
-        for (uint32_t m = 0; m < totalMins; ++m)
+        for (uint32_t m = 0; m < totalPoints; ++m)
         {
             lv_chart_set_value_by_id(roastChartUi.chart, roastChartUi.seriesCurrent, m, LV_CHART_POINT_NONE);
         }
@@ -399,7 +399,7 @@ extern void display_createRoastChart(const float *profile, uint32_t totalMins, f
                 }
                 else if (text && strstr(text, "min") != NULL)
                 {
-                    lv_label_set_text_fmt(child, "%" PRIu32 "min", (totalMins ? totalMins - 1 : 0));
+                    lv_label_set_text_fmt(child, "%" PRIu32 "min", (totalPoints ? totalPoints - 1 : 0));
                 }
             }
         }
@@ -424,11 +424,11 @@ extern void display_createRoastChart(const float *profile, uint32_t totalMins, f
     lv_obj_align(roastChartUi.chart, LV_ALIGN_TOP_MID, 0, UI_CHART_CENTER_Y_OFFSET);
     lv_chart_set_type(roastChartUi.chart, LV_CHART_TYPE_LINE);
     lv_chart_set_update_mode(roastChartUi.chart, LV_CHART_UPDATE_MODE_SHIFT); // we will address by index anyway
-    lv_chart_set_point_count(roastChartUi.chart, totalMins);
+    lv_chart_set_point_count(roastChartUi.chart, totalPoints);
 
     // Y range and tick marks
     lv_chart_set_range(roastChartUi.chart, LV_CHART_AXIS_PRIMARY_Y, toChartCoord(roastChartUi.yMin), toChartCoord(roastChartUi.yMax));
-    lv_chart_set_range(roastChartUi.chart, LV_CHART_AXIS_PRIMARY_X, toChartCoord(0), toChartCoord(totalMins - 1));
+    lv_chart_set_range(roastChartUi.chart, LV_CHART_AXIS_PRIMARY_X, toChartCoord(0), toChartCoord(totalPoints - 1));
     lv_chart_set_div_line_count(roastChartUi.chart, UI_CHART_DIV_LINES, UI_CHART_DIV_LINES);
 
     // Axis labels (simple min/max markers)
@@ -442,13 +442,13 @@ extern void display_createRoastChart(const float *profile, uint32_t totalMins, f
     ESP_LOGI(TAG, "YMax: %.1f", roastChartUi.yMax);
     lv_obj_align_to(yMaxLbl, roastChartUi.chart, LV_ALIGN_OUT_LEFT_TOP, UI_CHART_AXIS_LABEL_X_OFFSET, 0);
 
-    // X-axis min/max (0 min ... totalMins-1)
+    // X-axis min/max (0 min ... totalPoints-1)
     lv_obj_t *xMinLbl = lv_label_create(roastChartUi.screen);
     lv_label_set_text(xMinLbl, "0min");
     lv_obj_align_to(xMinLbl, roastChartUi.chart, LV_ALIGN_OUT_BOTTOM_LEFT, 0, UI_CHART_AXIS_LABEL_Y_OFFSET);
 
     lv_obj_t *xMaxLbl = lv_label_create(roastChartUi.screen);
-    lv_label_set_text_fmt(xMaxLbl, "%" PRIu32 "min", (totalMins ? totalMins - 1 : 0));
+    lv_label_set_text_fmt(xMaxLbl, "%" PRIu32 "min", (totalPoints ? totalPoints - 1 : 0));
     lv_obj_align_to(xMaxLbl, roastChartUi.chart, LV_ALIGN_OUT_BOTTOM_RIGHT, 0, UI_CHART_AXIS_LABEL_Y_OFFSET);
 
     // Series - use standard RGB colors
@@ -456,12 +456,12 @@ extern void display_createRoastChart(const float *profile, uint32_t totalMins, f
     roastChartUi.seriesCurrent = lv_chart_add_series(roastChartUi.chart, lv_palette_main(LV_PALETTE_BLUE), LV_CHART_AXIS_PRIMARY_Y);
 
     // Load target profile points
-    for (uint32_t m = 0; m < totalMins; ++m) {
+    for (uint32_t m = 0; m < totalPoints; ++m) {
         float v = isfinite(profile[m]) ? profile[m] : NAN;
         lv_chart_set_value_by_id(roastChartUi.chart, roastChartUi.seriesTarget, m, isfinite(v) ? toChartCoord(v) : LV_CHART_POINT_NONE);
     }
     // Initialize current with "no data"
-    for (uint32_t m = 0; m < totalMins; ++m) {
+    for (uint32_t m = 0; m < totalPoints; ++m) {
         lv_chart_set_value_by_id(roastChartUi.chart, roastChartUi.seriesCurrent, m, LV_CHART_POINT_NONE);
     }
 
@@ -524,7 +524,7 @@ extern void display_updateRoastChart(float currTargetTemp, uint32_t elapsedSecs,
     if (NULL == roastChartUi.screen) return;
 
     uint32_t minuteIdx = elapsedSecs / 60;
-    if (minuteIdx >= roastChartUi.totalMins) minuteIdx = roastChartUi.totalMins - 1;
+    if (minuteIdx >= (roastChartUi.totalPoints - 1)) minuteIdx = (roastChartUi.totalPoints - 1);
 
     bool ok = lvgl_port_lock(0);
     if (!ok) return;
@@ -538,7 +538,7 @@ extern void display_updateRoastChart(float currTargetTemp, uint32_t elapsedSecs,
 
     // Compose info label
     char leftBuf[16];
-    uint32_t totalSecs = roastChartUi.totalMins * 60;
+    uint32_t totalSecs = ((roastChartUi.totalPoints - 1) * 60);
     uint32_t remainingSecs = (elapsedSecs >= totalSecs) ? 0 : (totalSecs - elapsedSecs);
     formatTime(remainingSecs, leftBuf, sizeof leftBuf);
 
@@ -554,7 +554,7 @@ extern void display_updateRoastChart(float currTargetTemp, uint32_t elapsedSecs,
     lv_label_set_text(roastChartUi.labelInfo, info);
     lv_obj_align_to(roastChartUi.labelInfo, roastChartUi.chart, LV_ALIGN_OUT_BOTTOM_MID, 0, 20);
 
-    // Optional: keep the chart view scrolled to show progress if totalMins is large
+    // Optional: keep the chart view scrolled to show progress if totalPoints is large
     // lv_chart_set_zoom_x(roastChartUi.chart, zoomValue); // if you want zooming behaviour
 
     lv_obj_invalidate(roastChartUi.chart);

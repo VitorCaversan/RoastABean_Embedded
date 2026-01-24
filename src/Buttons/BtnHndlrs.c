@@ -255,10 +255,11 @@ static void updateChart(const ST_chartUpdateData *data)
     ST_storedChart *selectedChart = &storedCharts[ui->selectedIndex];
 
     uint32_t minuteIdx = data->elapsedSecs / 60;
-    if (minuteIdx >= selectedChart->totalMins) minuteIdx = selectedChart->totalMins - 1;
-
+    if (minuteIdx >= (selectedChart->totalPoints - 1)) minuteIdx = (selectedChart->totalPoints - 1);
+    
     if ((data->elapsedSecs % 60 == 0) && (isfinite(data->currentTemp)))
     {
+        ESP_LOGI(TAG, "Storing achieved temp at minute index %d, elapsedSecs %d", minuteIdx, data->elapsedSecs);
         selectedChart->achievedProfile[minuteIdx] = data->currentTemp;
     }
 }
@@ -384,7 +385,7 @@ static void setSelectRoastMenu(void)
                 storedCharts[i].tempProfile[j] = profile[j];
             }
 
-            storedCharts[i].totalMins = j;
+            storedCharts[i].totalPoints = j;
 
             sprintf(storedCharts[i].chartName, "Medium Roast");
         }
@@ -402,7 +403,7 @@ static void setSelectRoastMenu(void)
                 storedCharts[i].tempProfile[j] = profile[j];
             }
 
-            storedCharts[i].totalMins = j;
+            storedCharts[i].totalPoints = j;
 
             sprintf(storedCharts[i].chartName, "Testo Rosto");
         }
@@ -413,7 +414,7 @@ static void setSelectRoastMenu(void)
                 storedCharts[i].tempProfile[j] = currTemp + random() % 20;
             }
 
-            storedCharts[i].totalMins = j;
+            storedCharts[i].totalPoints = j;
             
             sprintf(storedCharts[i].chartName, "Test Chart %ld", i + 1);
         }
@@ -705,12 +706,12 @@ static void endRoast(void)
 
     printf("Target roast profile for %s:\n", selectedChart->chartName);
     uint32_t i;
-    for (i = 0; i < selectedChart->totalMins; i++)
+    for (i = 0; i < selectedChart->totalPoints; i++)
     {
         printf("%.2f\n", selectedChart->tempProfile[i]);
     }
     printf("Roast profile achieved\n");
-    for (i = 0; i < selectedChart->totalMins; i++)
+    for (i = 0; i < selectedChart->totalPoints; i++)
     {
         printf("%.2f\n", selectedChart->achievedProfile[i]);
     }
@@ -722,7 +723,9 @@ static void endRoast(void)
     }
     else
     {
+        ESP_LOGI(TAG, "Saving roast profile to NVS selectedChart index %d", ui->selectedIndex);
         json_storedChartToJson(selectedChart, buffer, NVS_MAX_PROFILE_SIZE);
+        ESP_LOGI(TAG, "Roast profile JSON: %s", buffer);
         nvs_saveRoastProfile(ui->selectedIndex, buffer, strlen(buffer));
     }
     free(buffer);
@@ -780,10 +783,11 @@ static void create5sTimerToStartRoastPopup(void *arg)
         return;
     }
     size_t outLen = 0;
-    nvs_loadRoastProfile((nvs_getProfileCount() - 1), buffer, 2056, &outLen);
-    json_jsonToStoredChart(buffer, &storedCharts[0]);
+    uint8_t chartIdx = nvs_getProfileCount() - 1;
+    nvs_loadRoastProfile(chartIdx, buffer, 2056, &outLen);
+    json_jsonToStoredChart(buffer, &storedCharts[chartIdx]);
     ST_VerticalMenuUi *ui = display_getSelectRoastMenuUi();
-    ui->selectedIndex = 0; // When timer ends, this profile will be used
+    ui->selectedIndex = chartIdx; // When timer ends, this profile will be used
     free(buffer);
 
     const esp_timer_create_args_t periodicTimerArgs = {

@@ -39,7 +39,7 @@ typedef struct ST_storedChart
     char chartName[MAX_CHART_NAMESIZE];
     float tempProfile[MAX_ROAST_TIME_IN_MIN];
     float achievedProfile[MAX_ROAST_TIME_IN_MIN];
-    uint32_t totalMins;
+    uint32_t totalPoints;
     bool isScheduled;
     char scheduledTime[32];  // ISO 8601 format: "2025-11-24T21:31:00.000Z"
     char currentTime[32];    // ISO 8601 format: "2025-11-23T21:30:00.496Z"

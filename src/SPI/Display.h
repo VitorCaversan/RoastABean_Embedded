@@ -53,7 +53,7 @@ typedef struct ST_RoastChartUi
     lv_chart_series_t *seriesTarget;
     lv_chart_series_t *seriesCurrent;
     lv_obj_t *labelInfo;
-    uint32_t totalMins;
+    uint32_t totalPoints;
     float yMin;
     float yMax;
 
@@ -145,11 +145,11 @@ extern void display_uiStatusBarUpdate(bool ethUp, float tempC, int pwm, bool fau
  * @brief Create a Roast Chart UI screen
  * 
  * @param profile The temperature profile array (°C/min)
- * @param totalMins Total duration of the roast (minutes)
+ * @param totalPoints Amount of points in the profile starting at time 0
  * @param yMin Minimum Y-axis value. If both NAN, auto-fit from profile
  * @param yMax Maximum Y-axis value. If both NAN, auto-fit from profile
  */
-extern void display_createRoastChart(const float *profile, uint32_t totalMins, float yMin, float yMax);
+extern void display_createRoastChart(const float *profile, uint32_t totalPoints, float yMin, float yMax);
 
 /**
  * @brief Show the Roast Chart screen
