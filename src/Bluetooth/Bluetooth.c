@@ -4,6 +4,7 @@
 #include "Bluetooth.h"
 #include "SpiConfig.h"
 #include "esp_heap_caps.h"
+#include "cJSON.h"
 
 /*******************************************************************************
  * MACROS AND DEFINES
@@ -456,6 +457,45 @@ static void treatReceivedPayload(const uint8_t *data, uint16_t len)
 
 static bool treatReceivedJson(const uint8_t *data, uint16_t len)
 {
+    ESP_LOGI(TAG, "Treating JSON data (%d bytes)", len);
+
+    // Quick check for STOP command using simple string search (lighter than full JSON parse)
+    // Look for "command":"STOP" pattern
+    if (len < 200 && strstr((const char *)data, "\"command\"") != NULL)
+    {
+        // Likely a command, do full parse
+        cJSON *root = cJSON_Parse((const char *)data);
+        if (root != NULL)
+        {
+            cJSON *command = cJSON_GetObjectItem(root, "command");
+            if (cJSON_IsString(command) && command->valuestring != NULL)
+            {
+                if (strcmp(command->valuestring, "STOP") == 0)
+                {
+                    ESP_LOGI(TAG, "Received STOP command, stopping roast");
+                    
+                    // Send stop roast event to button handlers task
+                    ST_extEventMsg msg = {
+                        .event = EXT_EVENT_STOP_ROAST,
+                        .data = NULL
+                    };
+                    
+                    if (xQueueSend(OS_btnHndlrsTaskQueue, &msg, pdMS_TO_TICKS(100)) != pdTRUE)
+                    {
+                        ESP_LOGE(TAG, "Failed to send stop roast event");
+                        cJSON_Delete(root);
+                        return false;
+                    }
+                    
+                    cJSON_Delete(root);
+                    return true;
+                }
+            }
+            cJSON_Delete(root);
+        }
+    }
+
+    // Not a command, parse as roast profile
     ST_storedChart *chart = heap_caps_malloc(sizeof(ST_storedChart), MALLOC_CAP_8BIT);
     if (chart == NULL)
     {

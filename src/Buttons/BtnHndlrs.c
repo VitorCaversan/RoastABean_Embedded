@@ -168,6 +168,13 @@ extern void btnHndlrs_task(void *arg)
         {
             switch (msg.event)
             {
+                case EXT_EVENT_STOP_ROAST:
+                    ESP_LOGI(TAG, "Stop roast event received from Bluetooth");
+                    if (pid_isCtrlLoopRunning())
+                    {
+                        onConfirmEndRoast();
+                    }
+                break;
                 case EXT_EVENT_UPDATE_CHART:
                     ESP_LOGI(TAG, "Update chart");
                     tempSens_suspendTask();
@@ -528,8 +535,8 @@ static void onConfirmStartRoast(void)
 
     display_hideConfirmationPopup();
 
-    bluetooth_stopAdvertising();
-    vTaskDelay(pdMS_TO_TICKS(100));
+    // bluetooth_stopAdvertising();
+    // vTaskDelay(pdMS_TO_TICKS(100));
 
     setBtnsCallbacks(onBackFromRoast, NULL, NULL, NULL);
 
@@ -659,6 +666,25 @@ static void onConfirmEndRoast(void)
 
     ST_VerticalMenuUi *ui = display_getSelectRoastMenuUi();
     ST_storedChart *selectedChart = &storedCharts[ui->selectedIndex];
+
+    if (bluetooth_isConnected()) {
+        char *cancelJson = calloc(JSON_MAX_SIZE, sizeof(char));
+        if (cancelJson != NULL) {
+            if (json_generateCancelJson(selectedChart->chartName, cancelJson, JSON_MAX_SIZE)) {
+                int result = bluetooth_sendData((uint8_t *)cancelJson, strlen(cancelJson));
+                if (result == 0) {
+                    ESP_LOGI(TAG, "Cancel notification sent via BLE");
+                } else {
+                    ESP_LOGE(TAG, "Failed to send cancel notification: %d", result);
+                }
+            } else {
+                ESP_LOGE(TAG, "Failed to generate cancel JSON");
+            }
+            free(cancelJson);
+        } else {
+            ESP_LOGE(TAG, "Failed to allocate memory for cancel JSON");
+        }
+    }
 
     printf("Target roast profile for %s:\n", selectedChart->chartName);
     uint32_t i;

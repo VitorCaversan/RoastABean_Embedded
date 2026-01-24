@@ -88,6 +88,23 @@ extern bool json_storedChartToJson(const ST_storedChart *chart, char *jsonStr, s
 extern bool json_generateFeedbackJson(const ST_storedChart *chart, char *jsonStr, size_t maxLen);
 
 /**
+ * @brief Generate cancellation JSON with curve name and cancel time
+ * 
+ * Creates a JSON object with the following structure:
+ * {
+ *   "command": "CANCELLED",
+ *   "cancelTime": "ISO 8601 string",
+ *   "curveName": "string"
+ * }
+ * 
+ * @param curveName Name of the curve being cancelled
+ * @param jsonStr Buffer to store the resulting JSON string
+ * @param maxLen Maximum length of the buffer
+ * @return true on success, false on error
+ */
+extern bool json_generateCancelJson(const char *curveName, char *jsonStr, size_t maxLen);
+
+/**
  * @brief Set all stored profiles' isFeedbackSent flag to false and resave them
  * 
  * @return ESP_OK on success, error code otherwise

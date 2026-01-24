@@ -57,4 +57,11 @@ extern void pid_ctrlLoopStart(float *tempProfile, uint32_t minsToControl);
  */
 extern void pid_ctrlLoopStop(void);
 
+/**
+ * @brief Check if the PID control loop is currently running
+ * 
+ * @return true if running, false otherwise
+ */
+extern bool pid_isCtrlLoopRunning(void);
+
 #endif // PID_CTRL_H

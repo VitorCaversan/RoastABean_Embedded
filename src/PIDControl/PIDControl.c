@@ -116,6 +116,11 @@ extern void pid_ctrlLoopStop(void)
     pidLoopTimer = NULL;
 }
 
+extern bool pid_isCtrlLoopRunning(void)
+{
+    return (pidLoopTimer != NULL);
+}
+
 /*******************************************************************************
  * LOCAL FUNCTIONS
  ******************************************************************************/

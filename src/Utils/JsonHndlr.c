@@ -397,6 +397,73 @@ extern bool json_generateFeedbackJson(const ST_storedChart *chart, char *jsonStr
     return success;
 }
 
+extern bool json_generateCancelJson(const char *curveName, char *jsonStr, size_t maxLen)
+{
+    if (curveName == NULL || jsonStr == NULL || maxLen == 0) {
+        ESP_LOGE(TAG, "Invalid parameters");
+        return false;
+    }
+
+    // Create root JSON object
+    cJSON *root = cJSON_CreateObject();
+    if (root == NULL) {
+        ESP_LOGE(TAG, "Failed to create JSON object");
+        return false;
+    }
+
+    bool success = true;
+
+    // Add command
+    if (cJSON_AddStringToObject(root, "command", "CANCELLED") == NULL) {
+        ESP_LOGE(TAG, "Failed to add command");
+        success = false;
+    }
+
+    // Add cancelTime (current timestamp)
+    char cancelTime[32];
+    timeUtils_getCurrentTimeIso8601(cancelTime, sizeof(cancelTime));
+    if (success && cJSON_AddStringToObject(root, "cancelTime", cancelTime) == NULL) {
+        ESP_LOGE(TAG, "Failed to add cancelTime");
+        success = false;
+    }
+
+    // Add curveName
+    if (success && cJSON_AddStringToObject(root, "curveName", curveName) == NULL) {
+        ESP_LOGE(TAG, "Failed to add curveName");
+        success = false;
+    }
+
+    // Convert to string
+    char *jsonOutput = NULL;
+    if (success) {
+        jsonOutput = cJSON_PrintUnformatted(root);
+        if (jsonOutput == NULL) {
+            ESP_LOGE(TAG, "Failed to print JSON");
+            success = false;
+        }
+    }
+
+    // Check if output fits in buffer
+    if (success) {
+        size_t jsonLen = strlen(jsonOutput);
+        if (jsonLen >= maxLen) {
+            ESP_LOGE(TAG, "JSON output (%zu bytes) exceeds buffer size (%zu bytes)", 
+                     jsonLen, maxLen);
+            cJSON_free(jsonOutput);
+            success = false;
+        } else {
+            // Copy to output buffer
+            strcpy(jsonStr, jsonOutput);
+            cJSON_free(jsonOutput);
+            ESP_LOGI(TAG, "Successfully generated cancel JSON for '%s' (%zu bytes)", 
+                     curveName, jsonLen);
+        }
+    }
+
+    cJSON_Delete(root);
+    return success;
+}
+
 extern esp_err_t json_setAllProfilesAsNotSent(void)
 {
     ESP_LOGI(TAG, "Setting all profiles as not sent");

@@ -31,6 +31,7 @@ typedef enum EN_extEvents
     EXT_EVENT_BTN_2_PRESSED,
     EXT_EVENT_BTN_3_PRESSED,
     EXT_EVENT_BTN_4_PRESSED,
+    EXT_EVENT_STOP_ROAST,
     
     EXT_EVENT_QTY // Must be the last element
 } EN_extEvents;
