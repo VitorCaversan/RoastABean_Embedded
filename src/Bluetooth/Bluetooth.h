@@ -88,4 +88,12 @@ extern uint16_t bluetooth_getReceivedData(uint8_t *buffer, uint16_t bufferSize);
  */
 extern int bluetooth_sendData(const uint8_t *data, uint16_t dataLen);
 
+/**
+ * @brief Check all stored charts and send pending feedback
+ * 
+ * Iterates through all stored charts, checks if isFeedbackSent is false,
+ * sends feedback JSON for those charts, and marks them as sent.
+ */
+extern void bluetooth_sendPendingFeedback(void);
+
 #endif // BLUETOOTH_H

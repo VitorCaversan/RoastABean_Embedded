@@ -293,6 +293,9 @@ static int gapEvent(struct ble_gap_event *event, void *arg)
                     ST_bleMsg msg = {.event = BLE_EVENT_CONNECTED, .dataLen = 0};
                     xQueueSend(OS_bleEventQueue, &msg, 0);
                 }
+                
+                // Check and send pending feedback after connection is established
+                bluetooth_sendPendingFeedback();
             } else {
                 // Connection failed, resume advertising
                 bluetooth_startAdvertising();
@@ -534,4 +537,84 @@ static bool treatReceivedJson(const uint8_t *data, uint16_t len)
 
     free(chart);
     return true;
+}
+
+extern void bluetooth_sendPendingFeedback(void)
+{
+    ESP_LOGI(TAG, "Checking for pending feedback to send");
+    
+    uint8_t profileCount = nvs_getProfileCount();
+    ESP_LOGI(TAG, "Found %d stored profiles", profileCount);
+    
+    for (uint8_t i = 0; i < profileCount; i++) {
+        // Load profile from NVS
+        char *buffer = calloc(NVS_MAX_PROFILE_SIZE, sizeof(char));
+        if (buffer == NULL) {
+            ESP_LOGE(TAG, "Failed to allocate memory for loading profile %d", i);
+            continue;
+        }
+        
+        size_t loadedLen = 0;
+        esp_err_t ret = nvs_loadRoastProfile(i, buffer, NVS_MAX_PROFILE_SIZE, &loadedLen);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to load profile %d: %s", i, esp_err_to_name(ret));
+            free(buffer);
+            continue;
+        }
+        
+        // Parse JSON to chart structure
+        ST_storedChart chart = {0};
+        if (!json_jsonToStoredChart(buffer, &chart)) {
+            ESP_LOGE(TAG, "Failed to parse profile %d", i);
+            free(buffer);
+            continue;
+        }
+        
+        // Check if feedback needs to be sent
+        if (!chart.isFeedbackSent) {
+            ESP_LOGI(TAG, "Profile %d '%s' has pending feedback", i, chart.chartName);
+            
+            // Generate feedback JSON
+            char *feedbackJson = calloc(JSON_MAX_SIZE, sizeof(char));
+            if (feedbackJson == NULL) {
+                ESP_LOGE(TAG, "Failed to allocate memory for feedback JSON");
+                free(buffer);
+                continue;
+            }
+            
+            if (json_generateFeedbackJson(&chart, feedbackJson, JSON_MAX_SIZE)) {
+                // Send feedback
+                int sendResult = bluetooth_sendData((uint8_t *)feedbackJson, strlen(feedbackJson));
+                if (sendResult == 0) {
+                    ESP_LOGI(TAG, "Feedback sent for profile %d", i);
+                    
+                    // Mark as sent and save back to NVS
+                    chart.isFeedbackSent = true;
+                    if (json_storedChartToJson(&chart, buffer, NVS_MAX_PROFILE_SIZE)) {
+                        ret = nvs_saveRoastProfile(i, buffer, strlen(buffer));
+                        if (ret == ESP_OK) {
+                            ESP_LOGI(TAG, "Profile %d updated with isFeedbackSent=true", i);
+                        } else {
+                            ESP_LOGE(TAG, "Failed to save updated profile %d: %s", i, esp_err_to_name(ret));
+                        }
+                    } else {
+                        ESP_LOGE(TAG, "Failed to convert chart to JSON for profile %d", i);
+                    }
+                    
+                    // Add delay between sends to avoid overwhelming the BLE stack
+                    vTaskDelay(pdMS_TO_TICKS(100));
+                } else {
+                    ESP_LOGE(TAG, "Failed to send feedback for profile %d", i);
+                }
+            } else {
+                ESP_LOGE(TAG, "Failed to generate feedback JSON for profile %d", i);
+            }
+            
+            free(feedbackJson);
+        }
+        
+        free(buffer);
+    }
+    
+    ESP_LOGI(TAG, "Finished checking for pending feedback");
 }

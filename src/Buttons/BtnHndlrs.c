@@ -723,6 +723,9 @@ static void endRoast(void)
         printf("%.2f\n", selectedChart->achievedProfile[i]);
     }
 
+    // Mark feedback as not sent before saving
+    selectedChart->isFeedbackSent = false;
+    
     char *buffer = calloc(NVS_MAX_PROFILE_SIZE, sizeof(char));
     if (buffer == NULL)
     {

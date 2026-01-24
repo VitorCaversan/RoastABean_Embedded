@@ -69,4 +69,21 @@ extern bool json_jsonToStoredChart(const char *jsonStr, ST_storedChart *chart);
  */
 extern bool json_storedChartToJson(const ST_storedChart *chart, char *jsonStr, size_t maxLen);
 
+/**
+ * @brief Generate feedback JSON from a stored chart
+ * 
+ * Creates a JSON object with the following structure:
+ * {
+ *   "temperatures": [array of achieved temperature floats],
+ *   "finishTime": "ISO 8601 string",
+ *   "curveName": "string"
+ * }
+ * 
+ * @param chart Pointer to ST_storedChart structure
+ * @param jsonStr Buffer to store the resulting JSON string
+ * @param maxLen Maximum length of the buffer
+ * @return true on success, false on error
+ */
+extern bool json_generateFeedbackJson(const ST_storedChart *chart, char *jsonStr, size_t maxLen);
+
 #endif // JSON_HNDLR_H

@@ -311,6 +311,90 @@ extern bool json_storedChartToJson(const ST_storedChart *chart, char *jsonStr, s
     return success;
 }
 
+extern bool json_generateFeedbackJson(const ST_storedChart *chart, char *jsonStr, size_t maxLen)
+{
+    if (chart == NULL || jsonStr == NULL || maxLen == 0) {
+        ESP_LOGE(TAG, "Invalid parameters");
+        return false;
+    }
+
+    // Create root JSON object
+    cJSON *root = cJSON_CreateObject();
+    if (root == NULL) {
+        ESP_LOGE(TAG, "Failed to create JSON object");
+        return false;
+    }
+
+    bool success = true;
+
+    // Add curveName
+    if (cJSON_AddStringToObject(root, "curveName", chart->chartName) == NULL) {
+        ESP_LOGE(TAG, "Failed to add curveName");
+        success = false;
+    }
+
+    // Add finishTime (static for now)
+    if (success && cJSON_AddStringToObject(root, "finishTime", "2026-01-15T14:30:45.000Z") == NULL) {
+        ESP_LOGE(TAG, "Failed to add finishTime");
+        success = false;
+    }
+
+    // Create temperatures array (using achievedProfile)
+    cJSON *temperatures = NULL;
+    if (success) {
+        temperatures = cJSON_CreateArray();
+        if (temperatures == NULL) {
+            ESP_LOGE(TAG, "Failed to create temperatures array");
+            success = false;
+        }
+    }
+    if (success) {
+        for (uint32_t i = 0; i < chart->totalPoints && i < MAX_ROAST_TIME_IN_MIN; i++) {
+            cJSON *temp = cJSON_CreateNumber(chart->achievedProfile[i]);
+            if (temp == NULL) {
+                ESP_LOGE(TAG, "Failed to create temperature number at index %lu", i);
+                cJSON_Delete(temperatures);
+                success = false;
+                break;
+            }
+            cJSON_AddItemToArray(temperatures, temp);
+        }
+    }
+    if (success) {
+        cJSON_AddItemToObject(root, "temperatures", temperatures);
+    }
+
+    // Convert to string
+    char *jsonOutput = NULL;
+    if (success) {
+        jsonOutput = cJSON_PrintUnformatted(root);
+        if (jsonOutput == NULL) {
+            ESP_LOGE(TAG, "Failed to print JSON");
+            success = false;
+        }
+    }
+
+    // Check if output fits in buffer
+    if (success) {
+        size_t jsonLen = strlen(jsonOutput);
+        if (jsonLen >= maxLen) {
+            ESP_LOGE(TAG, "JSON output (%zu bytes) exceeds buffer size (%zu bytes)", 
+                     jsonLen, maxLen);
+            cJSON_free(jsonOutput);
+            success = false;
+        } else {
+            // Copy to output buffer
+            strcpy(jsonStr, jsonOutput);
+            cJSON_free(jsonOutput);
+            ESP_LOGI(TAG, "Successfully generated feedback JSON for '%s' (%zu bytes)", 
+                     chart->chartName, jsonLen);
+        }
+    }
+
+    cJSON_Delete(root);
+    return success;
+}
+
 /*******************************************************************************
  * LOCAL FUNCTIONS
  ******************************************************************************/
