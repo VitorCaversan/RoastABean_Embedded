@@ -331,6 +331,9 @@ static void onSelectMainMenu(void)
 #endif
         break;
         case 2: // "Connect"
+#if NVS_DEBUG
+            json_setAllProfilesAsNotSent();
+#endif
             ESP_LOGI(TAG, "Connecting...");
             bluetooth_startAdvertising();
         break;
@@ -409,6 +412,7 @@ static void setSelectRoastMenu(void)
         }
         else
         {
+            if (currTemp < 20.0f) currTemp = 20.0f;
             for (j = 0; j < (MAX_ROAST_TIME_IN_MIN / 4); j++)
             {
                 storedCharts[i].tempProfile[j] = currTemp + random() % 20;
@@ -428,14 +432,13 @@ static void setSelectRoastMenu(void)
         return;
     }
 
-    size_t outLen = 0;
-    
 #if NVS_DEBUG
     for (i = 0; i < 3; i++)
     {
         json_storedChartToJson(&storedCharts[i], buffer, 2055);
         nvs_saveRoastProfile(i, buffer, strlen(buffer));
 #else
+    size_t outLen = 0;
     for (i = 0; i < nvs_getProfileCount(); i++)
     {
         nvs_loadRoastProfile(i, buffer, 2056, &outLen);

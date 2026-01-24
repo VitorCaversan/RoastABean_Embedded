@@ -11,6 +11,14 @@
  * LOCAL FUNCTION DECLARATIONS
  ******************************************************************************/
 
+/**
+ * @brief Generate a random ISO 8601 timestamp string
+ * 
+ * @param buffer Buffer to store the timestamp string (must be at least 25 bytes)
+ * @param bufferSize Size of the buffer
+ */
+static void generateRandomTimestamp(char *buffer, size_t bufferSize);
+
 /*******************************************************************************
  * LOCAL VARIABLES
  ******************************************************************************/
@@ -122,6 +130,46 @@ extern bool timeUtils_isScheduledTimeReached(time_t scheduledTime)
     return difftime(now, scheduledTime) >= 0;
 }
 
+extern void timeUtils_getCurrentTimeIso8601(char *outputString, size_t maxSize)
+{
+    generateRandomTimestamp(outputString, maxSize);
+}
+
 /*******************************************************************************
  * LOCAL FUNCTIONS
  ******************************************************************************/
+
+ static void generateRandomTimestamp(char *buffer, size_t bufferSize)
+{
+    if (buffer == NULL || bufferSize < 25) {
+        return;
+    }
+    
+    // Generate random date/time components
+    // Year: 2024-2026
+    uint32_t year = 2024 + (esp_random() % 3);
+    
+    // Month: 1-12
+    uint32_t month = 1 + (esp_random() % 12);
+    
+    // Day: 1-28 (simplified to avoid invalid dates)
+    uint32_t day = 1 + (esp_random() % 28);
+    
+    // Hour: 0-23
+    uint32_t hour = esp_random() % 24;
+    
+    // Minute: 0-59
+    uint32_t minute = esp_random() % 60;
+    
+    // Second: 0-59
+    uint32_t second = esp_random() % 60;
+    
+    // Millisecond: 0-999
+    uint32_t millisecond = esp_random() % 1000;
+    
+    // Format as ISO 8601: "YYYY-MM-DDTHH:MM:SS.sssZ"
+    snprintf(buffer, bufferSize, "%04lu-%02lu-%02luT%02lu:%02lu:%02lu.%03luZ",
+             (unsigned long)year, (unsigned long)month, (unsigned long)day,
+             (unsigned long)hour, (unsigned long)minute, (unsigned long)second,
+             (unsigned long)millisecond);
+}

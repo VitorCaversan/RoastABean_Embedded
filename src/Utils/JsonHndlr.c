@@ -167,7 +167,7 @@ extern bool json_jsonToStoredChart(const char *jsonStr, ST_storedChart *chart)
         if (cJSON_IsBool(isFeedbackSent)) {
             chart->isFeedbackSent = cJSON_IsTrue(isFeedbackSent);
         } else {
-            chart->isFeedbackSent = false;
+            chart->isFeedbackSent = true;
         }
     }
 
@@ -333,8 +333,10 @@ extern bool json_generateFeedbackJson(const ST_storedChart *chart, char *jsonStr
         success = false;
     }
 
-    // Add finishTime (static for now)
-    if (success && cJSON_AddStringToObject(root, "finishTime", "2026-01-15T14:30:45.000Z") == NULL) {
+    // Add finishTime (random timestamp)
+    char finishTime[32];
+    timeUtils_getCurrentTimeIso8601(finishTime, sizeof(finishTime));
+    if (success && cJSON_AddStringToObject(root, "finishTime", finishTime) == NULL) {
         ESP_LOGE(TAG, "Failed to add finishTime");
         success = false;
     }
@@ -393,6 +395,75 @@ extern bool json_generateFeedbackJson(const ST_storedChart *chart, char *jsonStr
 
     cJSON_Delete(root);
     return success;
+}
+
+extern esp_err_t json_setAllProfilesAsNotSent(void)
+{
+    ESP_LOGI(TAG, "Setting all profiles as not sent");
+    
+    uint8_t count = nvs_getProfileCount();
+    if (count == 0) {
+        ESP_LOGI(TAG, "No profiles to update");
+        return ESP_OK;
+    }
+    
+    uint8_t successCount = 0;
+    uint8_t failCount = 0;
+    
+    for (uint8_t i = 0; i < count; i++) {
+        // Load profile from NVS
+        char *buffer = calloc(NVS_MAX_PROFILE_SIZE, sizeof(char));
+        if (buffer == NULL) {
+            ESP_LOGE(TAG, "Failed to allocate memory for profile %d", i);
+            failCount++;
+            continue;
+        }
+        
+        size_t loadedLen = 0;
+        esp_err_t ret = nvs_loadRoastProfile(i, buffer, NVS_MAX_PROFILE_SIZE, &loadedLen);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to load profile %d: %s", i, esp_err_to_name(ret));
+            free(buffer);
+            failCount++;
+            continue;
+        }
+        
+        // Parse JSON to chart structure
+        ST_storedChart chart = {0};
+        if (!json_jsonToStoredChart(buffer, &chart)) {
+            ESP_LOGE(TAG, "Failed to parse profile %d", i);
+            free(buffer);
+            failCount++;
+            continue;
+        }
+        
+        // Set isFeedbackSent to false
+        chart.isFeedbackSent = false;
+        
+        // Convert back to JSON
+        if (!json_storedChartToJson(&chart, buffer, NVS_MAX_PROFILE_SIZE)) {
+            ESP_LOGE(TAG, "Failed to convert profile %d to JSON", i);
+            free(buffer);
+            failCount++;
+            continue;
+        }
+        
+        // Save back to NVS
+        ret = nvs_saveRoastProfile(i, buffer, strlen(buffer));
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to save profile %d: %s", i, esp_err_to_name(ret));
+            free(buffer);
+            failCount++;
+            continue;
+        }
+        
+        ESP_LOGI(TAG, "Profile %d updated: isFeedbackSent=false", i);
+        successCount++;
+        free(buffer);
+    }
+    
+    ESP_LOGI(TAG, "Updated %d profiles, %d failed", successCount, failCount);
+    return (failCount == 0) ? ESP_OK : ESP_FAIL;
 }
 
 /*******************************************************************************

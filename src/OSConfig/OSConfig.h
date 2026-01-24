@@ -44,7 +44,8 @@ typedef struct ST_extEventMsg
 typedef enum {
     BLE_EVENT_CONNECTED = 0,
     BLE_EVENT_DISCONNECTED,
-    BLE_EVENT_DATA_RECEIVED
+    BLE_EVENT_DATA_RECEIVED,
+    BLE_EVENT_SEND_PENDING_FEEDBACK
 } EN_bleEvent;
 
 typedef struct {

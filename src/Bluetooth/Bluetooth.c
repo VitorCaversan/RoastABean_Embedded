@@ -112,6 +112,11 @@ extern void bluetooth_task(void *arg)
                     ESP_LOGI(TAG, "Received data: %.*s", msg.dataLen, receivedData);
                     treatReceivedPayload(receivedData, msg.dataLen);
                 break;
+                case BLE_EVENT_SEND_PENDING_FEEDBACK:
+                    vTaskDelay(pdMS_TO_TICKS(3000));
+                    ESP_LOGI(TAG, "Sending pending feedback");
+                    bluetooth_sendPendingFeedback();
+                break;
                 default:
                     ESP_LOGW(TAG, "Unknown BLE event: %d", msg.event);
                 break;
@@ -249,7 +254,7 @@ extern int bluetooth_sendData(const uint8_t *data, uint16_t dataLen)
         return -1;
     }
     
-    int rc = ble_gattc_notify_custom(connHandle, nusTxHandle, om);
+    int rc = ble_gatts_notify_custom(connHandle, nusTxHandle, om);
     if (rc != 0) {
         ESP_LOGE(TAG, "Failed to send notification: %d", rc);
         return rc;
@@ -294,8 +299,11 @@ static int gapEvent(struct ble_gap_event *event, void *arg)
                     xQueueSend(OS_bleEventQueue, &msg, 0);
                 }
                 
-                // Check and send pending feedback after connection is established
-                bluetooth_sendPendingFeedback();
+                // Send pending feedback event to be handled in bluetooth_task context (with larger stack)
+                if (OS_bleEventQueue != NULL) {
+                    ST_bleMsg msg = {.event = BLE_EVENT_SEND_PENDING_FEEDBACK, .dataLen = 0};
+                    xQueueSend(OS_bleEventQueue, &msg, 0);
+                }
             } else {
                 // Connection failed, resume advertising
                 bluetooth_startAdvertising();
@@ -546,7 +554,8 @@ extern void bluetooth_sendPendingFeedback(void)
     uint8_t profileCount = nvs_getProfileCount();
     ESP_LOGI(TAG, "Found %d stored profiles", profileCount);
     
-    for (uint8_t i = 0; i < profileCount; i++) {
+    for (uint8_t i = 0; i < profileCount; i++)
+    {
         // Load profile from NVS
         char *buffer = calloc(NVS_MAX_PROFILE_SIZE, sizeof(char));
         if (buffer == NULL) {
@@ -614,6 +623,7 @@ extern void bluetooth_sendPendingFeedback(void)
         }
         
         free(buffer);
+        vTaskDelay(pdMS_TO_TICKS(500));
     }
     
     ESP_LOGI(TAG, "Finished checking for pending feedback");

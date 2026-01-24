@@ -8,6 +8,7 @@
 #include <string.h>
 #include <time.h>
 #include <stdbool.h>
+#include "esp_random.h"
 #include "esp_log.h"
 
 /*******************************************************************************
@@ -75,5 +76,12 @@ extern int32_t timeUtils_diffSeconds(time_t timestamp1, time_t timestamp2);
  * @return true if current time >= scheduled time, false otherwise
  */
 extern bool timeUtils_isScheduledTimeReached(time_t scheduledTime);
+
+/**
+ * @brief Get current time as ISO 8601 string
+ * 
+ * Currently only returns a generated timestamp for testing purposes.
+ */
+extern void timeUtils_getCurrentTimeIso8601(char *outputString, size_t maxSize);
 
 #endif // TIME_UTILS_H

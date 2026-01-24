@@ -10,6 +10,7 @@
 #include <math.h>
 #include "cJSON.h"
 #include "esp_log.h"
+#include "TimeUtils.h"
 #include "NVShndlr.h"
 
 /*******************************************************************************
@@ -85,5 +86,12 @@ extern bool json_storedChartToJson(const ST_storedChart *chart, char *jsonStr, s
  * @return true on success, false on error
  */
 extern bool json_generateFeedbackJson(const ST_storedChart *chart, char *jsonStr, size_t maxLen);
+
+/**
+ * @brief Set all stored profiles' isFeedbackSent flag to false and resave them
+ * 
+ * @return ESP_OK on success, error code otherwise
+ */
+extern esp_err_t json_setAllProfilesAsNotSent(void);
 
 #endif // JSON_HNDLR_H
