@@ -114,9 +114,6 @@ extern void pid_ctrlLoopStop(void)
     esp_timer_stop(pidLoopTimer);
     esp_timer_delete(pidLoopTimer);
     pidLoopTimer = NULL;
-
-    ESP_LOGI(TAG, "Set triac to OFF state");
-    triac_setState(false);
 }
 
 /*******************************************************************************
