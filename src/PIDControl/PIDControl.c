@@ -14,6 +14,9 @@
 #define K_FF                        10.0f // % per unit of (airFlowRatio - 1)
 #define POW_FF                      1.0f
 
+#define SECONDS_TO_INVERT_DISC_ROTATION 180
+#define SECONDS_TO_REVERT_DISC_ROTATION 30
+
 /*******************************************************************************
  * LOCAL FUNCTION DECLARATIONS
  ******************************************************************************/
@@ -34,6 +37,13 @@ static void pidLoopCallback(void *args);
  * @return float Target temperature in °C
  */
 static float getTargetTemperature(ST_pidCtrlContext *ctx, unsigned long usSinceStart);
+
+/**
+ * @brief Callback to revert the disc rotation after a short delay
+ * 
+ * @param arg Not used
+ */
+static void revertDiscRotationCallback(void *arg);
 
 /**
  * @brief Calculate the blower feedforward value based on the input voltage
@@ -181,6 +191,21 @@ static void pidLoopCallback(void *args)
         {
             portYIELD_FROM_ISR();
         }
+
+        if ((elapsedSecs % SECONDS_TO_INVERT_DISC_ROTATION) == 0)
+        {
+            ESP_LOGI(TAG, "Inverting disc rotation direction");
+            DCMotor_rampSpeed(TB_BOARD_1, MOTOR_A, DISC_ROTATION_PWM, -DISC_ROTATION_PWM, DISC_ROTATION_STEP, true);
+
+            const esp_timer_create_args_t oneshotTimerArgs = {
+                .callback = revertDiscRotationCallback,
+                .arg = NULL,
+                .name = "turn_axle_motor_and_fan_off"
+            };
+            esp_timer_handle_t oneshotTimer = NULL;
+            ESP_ERROR_CHECK(esp_timer_create(&oneshotTimerArgs, &oneshotTimer));
+            ESP_ERROR_CHECK(esp_timer_start_once(oneshotTimer, SECONDS_TO_REVERT_DISC_ROTATION * 1000000));
+        }
     }
 }
 
@@ -197,4 +222,17 @@ static float getTargetTemperature(ST_pidCtrlContext *ctx, unsigned long usSinceS
     float fraction = (float)(usSinceStart % USECONDS_IN_1_MIN) / USECONDS_IN_1_MIN;
 
     return (lowerTemp + ((upperTemp - lowerTemp) * fraction));
+}
+
+static void revertDiscRotationCallback(void *arg)
+{
+    ESP_LOGI(TAG, "Reverting disc rotation direction");
+    DCMotor_rampSpeed(TB_BOARD_1, MOTOR_A, -DISC_ROTATION_PWM, DISC_ROTATION_PWM, DISC_ROTATION_STEP, true);
+
+    esp_timer_handle_t* timer_ptr = (esp_timer_handle_t*)arg;
+    if (timer_ptr && *timer_ptr)
+    {
+        esp_timer_delete(*timer_ptr);
+        *timer_ptr = NULL;
+    }
 }

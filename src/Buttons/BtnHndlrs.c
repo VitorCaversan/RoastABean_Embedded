@@ -139,8 +139,8 @@ static void endRoast(void);
  * 
  * @param seconds Duration in seconds to keep them on
  */
-static void keepAxleMotorAndTriacOnForSeconds(uint32_t seconds);
-static void turnAxleMotorAndTriacOffCallback(void *arg);
+static void keepDiscMotorAndTriacOnForSeconds(uint32_t seconds);
+static void turnDiscMotorAndTriacOffCallback(void *arg);
 
 /*******************************************************************************
  * LOCAL VARIABLES
@@ -555,7 +555,7 @@ static void onConfirmStartRoast(void)
     pid_ctrlLoopStart(selectedChart->tempProfile, (selectedChart->totalPoints - 1));
     ESP_LOGI(TAG, "PID control loop started");
 
-    DCMotor_rampSpeedUp(TB_BOARD_1, MOTOR_A, 0, 70, 10);
+    DCMotor_rampSpeed(TB_BOARD_1, MOTOR_A, 0, DISC_ROTATION_PWM, DISC_ROTATION_STEP, false);
     ESP_LOGI(TAG, "Axle motor started");
 }
 
@@ -657,7 +657,7 @@ static void onConfirmEndRoast(void)
 
     DCMotor_turnFansOnForSeconds(180);
 
-    keepAxleMotorAndTriacOnForSeconds(20);
+    keepDiscMotorAndTriacOnForSeconds(20);
 
     ST_motorControlContext *motorCtrlCtx = DCMotor_getContextFromMotor(TB_BOARD_2);
     tb6612_setSpeed(&motorCtrlCtx->motor, MOTOR_A, 100);
@@ -735,7 +735,7 @@ static void endRoast(void)
 
     tb6612_setSpeed(&motorCtrlCtx->motor, MOTOR_A, 0);
 
-    keepAxleMotorAndTriacOnForSeconds(30);
+    keepDiscMotorAndTriacOnForSeconds(30);
 
     ST_VerticalMenuUi *ui = display_getSelectRoastMenuUi();
     ST_storedChart *selectedChart = &storedCharts[ui->selectedIndex];
@@ -777,7 +777,7 @@ static void endRoast(void)
     display_showMainMenu(NULL, 0);
 }
 
-static void keepAxleMotorAndTriacOnForSeconds(uint32_t seconds)
+static void keepDiscMotorAndTriacOnForSeconds(uint32_t seconds)
 {
     ESP_LOGI(TAG, "Keeping axle motor and fan on for %u seconds", seconds);
 
@@ -788,7 +788,7 @@ static void keepAxleMotorAndTriacOnForSeconds(uint32_t seconds)
     triac_setPwrPercent(90.0f);
 
     const esp_timer_create_args_t oneshotTimerArgs = {
-        .callback = turnAxleMotorAndTriacOffCallback,
+        .callback = turnDiscMotorAndTriacOffCallback,
         .arg = NULL,
         .name = "turn_axle_motor_and_fan_off"
     };
@@ -797,15 +797,21 @@ static void keepAxleMotorAndTriacOnForSeconds(uint32_t seconds)
     ESP_ERROR_CHECK(esp_timer_start_once(oneshotTimer, seconds * 1000000));
 }
 
-static void turnAxleMotorAndTriacOffCallback(void *arg)
+static void turnDiscMotorAndTriacOffCallback(void *arg)
 {
-    ESP_LOGI(TAG, "Turning axle motor and triac off after delay");
+    ESP_LOGI(TAG, "Turning disc motor and triac off after delay");
 
-    ST_motorControlContext *motorCtrlCtx = DCMotor_getContextFromMotor(TB_BOARD_1);
-    tb6612_setSpeed(&motorCtrlCtx->motor, MOTOR_A, 0);
+    DCMotor_rampSpeed(TB_BOARD_1, MOTOR_A, DISC_ROTATION_PWM, 0, DISC_ROTATION_STEP, true);
 
     triac_setPwrPercent(0.0f);
     triac_setState(false);
+
+    esp_timer_handle_t* timer_ptr = (esp_timer_handle_t*)arg;
+    if (timer_ptr && *timer_ptr)
+    {
+        esp_timer_delete(*timer_ptr);
+        *timer_ptr = NULL;
+    }
 }
 
 static void create5sTimerToStartRoastPopup(void *arg)
@@ -837,6 +843,13 @@ static void create5sTimerToStartRoastPopup(void *arg)
     
     ESP_ERROR_CHECK(esp_timer_create(&periodicTimerArgs, &periodic5sTimer));
     ESP_ERROR_CHECK(esp_timer_start_periodic(periodic5sTimer, S_TO_USECONDS(1)));
+
+    esp_timer_handle_t* timer_ptr = (esp_timer_handle_t*)arg;
+    if (timer_ptr && *timer_ptr)
+    {
+        esp_timer_delete(*timer_ptr);
+        *timer_ptr = NULL;
+    }
 }
 
 static void timerToStartRoastCllbck(void *arg)

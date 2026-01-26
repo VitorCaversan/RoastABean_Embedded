@@ -43,6 +43,7 @@ static void mainTask(void *arg);
 QueueHandle_t OS_mainTaskQueue = NULL;
 QueueHandle_t OS_btnHndlrsTaskQueue = NULL;
 QueueHandle_t OS_bleEventQueue = NULL;
+QueueHandle_t OS_dcMotorTaskQueue = NULL;
 TaskHandle_t OS_tempSensTaskHandle = NULL;
 
 static const char *TAG = "MAIN";
@@ -55,10 +56,12 @@ void app_main(void)
 {
     ESP_LOGI(TAG, "System starting - Free heap: %lu bytes", esp_get_free_heap_size());
     
-    OS_btnHndlrsTaskQueue = xQueueCreate(32, sizeof(ST_extEventMsg));
+    OS_btnHndlrsTaskQueue = xQueueCreate(16, sizeof(ST_extEventMsg));
     configASSERT(OS_btnHndlrsTaskQueue != NULL);
     OS_bleEventQueue = xQueueCreate(16, sizeof(ST_bleMsg));
     configASSERT(OS_bleEventQueue != NULL);
+    OS_dcMotorTaskQueue = xQueueCreate(2, sizeof(ST_dcMotorMsg));
+    configASSERT(OS_dcMotorTaskQueue != NULL);
 
     nvs_init();
     
@@ -89,6 +92,7 @@ void app_main(void)
     triac_triacInit();
     pid_PIDInit();
     DCMotor_initDcMotors();
+    DCMotor_initTask();
     DCMotor_setMiniFanState(true);
     
     vTaskDelay(pdMS_TO_TICKS(100));
@@ -103,6 +107,7 @@ void app_main(void)
     xTaskCreatePinnedToCore(btnHndlrs_task, "btnHndlrsTask", 8192, NULL, configMAX_PRIORITIES - 1, NULL, 1);
     xTaskCreatePinnedToCore(bluetooth_task, "bluetoothTask", 8192, NULL, configMAX_PRIORITIES - 2, NULL, 1);
     xTaskCreatePinnedToCore(tempSens_task, "tempSensTask", 4096, NULL, configMAX_PRIORITIES - 3, &OS_tempSensTaskHandle, 1);
+    xTaskCreatePinnedToCore(DCMotor_task, "dcMotorTask", 4096, NULL, configMAX_PRIORITIES - 4, NULL, 1);
 #endif
 }
 

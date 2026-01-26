@@ -47,6 +47,21 @@ static void pid_loop_cb(void *args);
  */
 static void turnFansOffCallback(void *arg);
 
+/**
+ * @brief Speed motor up in intervals of 200ms
+ * 
+ * @param tbBoard The TB board where the motor is connected
+ * @param motorId The motor id
+ * @param startingPercent Starting point for the ramp
+ * @param targetPercent Endpoint for the ramp
+ * @param step The steps taken every 200ms
+ */
+static void rampSpeed(EN_TbBoard tbBoard,
+                      EN_tbMotorId motorId,
+                      float startingPercent,
+                      float targetPercent,
+                      float step);
+
 /*******************************************************************************
  * LOCAL VARIABLES
  ******************************************************************************/
@@ -56,6 +71,55 @@ static const char *TAG = "DCMOTOR";
 /*******************************************************************************
  * EXTERNAL FUNCTIONS
  ******************************************************************************/
+
+extern void DCMotor_task(void *arg)
+{
+    ST_dcMotorMsg msg;
+    
+    while (1)
+    {
+        if (xQueueReceive(OS_dcMotorTaskQueue, &msg, portMAX_DELAY) == pdTRUE)
+        {
+            switch (msg.event)
+            {
+                case DCMOTOR_EVENT_RAMP_MOTOR_SPEED:
+                    if (msg.data != NULL)
+                    {
+                        ST_rampSpeedData *rampData = (ST_rampSpeedData *)msg.data;
+                        
+                        ESP_LOGI(TAG, "Ramping motor speed - Board: %d, Motor: %d, Start: %.2f%%, Target: %.2f%%, Step: %.2f%%",
+                                rampData->tbBoard, rampData->motorId, rampData->startingPercent,
+                                rampData->targetPercent, rampData->step);
+                        
+                        rampSpeed(rampData->tbBoard,
+                                    rampData->motorId,
+                                    rampData->startingPercent,
+                                    rampData->targetPercent,
+                                    rampData->step);
+                        
+                        free(msg.data);
+                    }
+                break;
+                
+                default:
+                    ESP_LOGW(TAG, "Unknown DC motor event: %d", msg.event);
+                    if (msg.data != NULL)
+                    {
+                        free(msg.data);
+                    }
+                break;
+            }
+        }
+    }
+}
+
+extern void DCMotor_initTask(void)
+{
+    OS_dcMotorTaskQueue = xQueueCreate(16, sizeof(ST_dcMotorMsg));
+    configASSERT(OS_dcMotorTaskQueue != NULL);
+    
+    ESP_LOGI(TAG, "DC Motor task initialized");
+}
 
 extern void DCMotor_initDcMotors(void)
 {
@@ -78,7 +142,7 @@ extern void DCMotor_initDcMotors(void)
         .ain1Gpio   = MOTOR3_IN_A, .ain2Gpio = MOTOR3_IN_B, .pwmaGpio = MOTOR3_PWM_PIN,
         .bin1Gpio   = MOTOR4_IN_A, .bin2Gpio = MOTOR4_IN_B, .pwmbGpio = MOTOR4_PWM_PIN,
         .ledcMode   = LEDC_LOW_SPEED_MODE,
-        .ledcTimer  = LEDC_TIMER_2,
+        .ledcTimer  = LEDC_TIMER_3,
         .pwmFreqHz  = 5000,
         .dutyRes    = LEDC_TIMER_10_BIT,
         .chA        = LEDC_CHANNEL_4,
@@ -176,27 +240,50 @@ extern ST_motorControlContext *DCMotor_getContextFromMotor(EN_TbBoard motor)
     return &motorsCtrlCntxt[motor];
 }
 
-extern void DCMotor_rampSpeedUp(EN_TbBoard tbBoard,
-                                EN_tbMotorId motorId,
-                                float startingPercent,
-                                float targetPercent,
-                                float step)
+extern void DCMotor_rampSpeed(EN_TbBoard tbBoard,
+                              EN_tbMotorId motorId,
+                              float startingPercent,
+                              float targetPercent,
+                              float step,
+                              bool isFromISR)
 {
-    if ((targetPercent < startingPercent) || (step > 100.0f))
+    ST_rampSpeedData *rampData = malloc(sizeof(ST_rampSpeedData));
+    if (rampData == NULL)
     {
-        ESP_LOGI(TAG, "Speed ramp not possible");
+        ESP_LOGE(TAG, "Failed to allocate memory for ramp speed data");
+        return;
     }
 
-    ST_motorControlContext *motorCtx = DCMotor_getContextFromMotor(tbBoard);
+    rampData->tbBoard = tbBoard;
+    rampData->motorId = motorId;
+    rampData->startingPercent = startingPercent;
+    rampData->targetPercent = targetPercent;
+    rampData->step = step;
 
-    for (; startingPercent <= targetPercent; startingPercent += step)
+    ST_dcMotorMsg msg = {
+        .event = DCMOTOR_EVENT_RAMP_MOTOR_SPEED,
+        .data = (void *)rampData
+    };
+
+    if (isFromISR)
     {
-        tb6612_setSpeed(&motorCtx->motor, motorId, startingPercent);
-    
-        vTaskDelay(pdMS_TO_TICKS(200));
-    }
+        BaseType_t higherPriorityTaskWoken = pdFALSE;
+        if (xQueueSendFromISR(OS_dcMotorTaskQueue, &msg, &higherPriorityTaskWoken) != pdTRUE)
+        {
+            ESP_LOGE(TAG, "Failed to send ramp speed message from ISR");
+            free(rampData);
+        }
 
-    tb6612_setSpeed(&motorCtx->motor, motorId, targetPercent);
+        if (higherPriorityTaskWoken) portYIELD_FROM_ISR();
+    }
+    else
+    {
+        if (xQueueSend(OS_dcMotorTaskQueue, &msg, pdMS_TO_TICKS(100)) != pdTRUE)
+        {
+            ESP_LOGE(TAG, "Failed to send ramp speed message");
+            free(rampData);
+        }
+    }
 }
 
 extern void DCMotor_turnFansOnForSeconds(uint32_t seconds)
@@ -269,4 +356,57 @@ static void turnFansOffCallback(void *arg)
     ST_motorControlContext *motorCtx = DCMotor_getContextFromMotor(TB_BOARD_1);
 
     tb6612_setSpeed(&motorCtx->motor, MOTOR_B, 0);
+
+    esp_timer_handle_t* timer_ptr = (esp_timer_handle_t*)arg;
+    if (timer_ptr && *timer_ptr)
+    {
+        esp_timer_delete(*timer_ptr);
+        *timer_ptr = NULL;
+    }
+}
+
+static void rampSpeed(EN_TbBoard tbBoard,
+                      EN_tbMotorId motorId,
+                      float startingPercent,
+                      float targetPercent,
+                      float step)
+{
+    static float prevEndPercent = -1.0f;
+    
+    if ((step > 100.0f) || (step <= 0.0f))
+    {
+        ESP_LOGW(TAG, "Speed ramp not possible");
+        return;
+    }
+
+    ST_motorControlContext *motorCtx = DCMotor_getContextFromMotor(tbBoard);
+
+    // If they are of opposing signs, start from 0
+    if (fabsf(prevEndPercent - startingPercent) > fabsf(prevEndPercent))
+    {
+        tb6612_setSpeed(&motorCtx->motor, motorId, 0.0f);
+        vTaskDelay(pdMS_TO_TICKS(200));
+    }
+
+    if (startingPercent > targetPercent)
+    {
+        for (; startingPercent >= targetPercent; startingPercent -= step)
+        {
+            tb6612_setSpeed(&motorCtx->motor, motorId, startingPercent);
+        
+            vTaskDelay(pdMS_TO_TICKS(200));
+        }
+    }
+    else
+    {
+        for (; startingPercent <= targetPercent; startingPercent += step)
+        {
+            tb6612_setSpeed(&motorCtx->motor, motorId, startingPercent);
+        
+            vTaskDelay(pdMS_TO_TICKS(200));
+        }
+    }
+
+    tb6612_setSpeed(&motorCtx->motor, motorId, targetPercent);
+    prevEndPercent = targetPercent;
 }

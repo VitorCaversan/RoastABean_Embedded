@@ -17,6 +17,7 @@
 #include "TriacControl.h"
 #include "TempSens.h"
 #include "Display.h"
+#include "DCMotor.h"
 
 /*******************************************************************************
  * MACROS AND DEFINES
