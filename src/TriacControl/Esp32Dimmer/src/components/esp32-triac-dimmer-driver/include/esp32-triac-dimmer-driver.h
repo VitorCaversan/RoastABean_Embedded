@@ -37,8 +37,6 @@ static const uint8_t powerBuf[] = {
     19, 14,
     0};
 
-#define ESP_INTR_FLAG_DEFAULT 0
-
 typedef enum
 {
     NORMAL_MODE = 0,

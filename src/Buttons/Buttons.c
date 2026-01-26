@@ -30,7 +30,7 @@ static const char *TAG = "BUTTONS";
  * LOCAL FUNCTIONS
  ******************************************************************************/
 
-static void IRAM_ATTR btnIsrHndlr(void *arg)
+static void btnIsrHndlr(void *arg)
 {
     const int pin = (int)(intptr_t)arg;
     
@@ -95,12 +95,19 @@ static void IRAM_ATTR btnIsrHndlr(void *arg)
 
 extern void btn_configButtons(void)
 {
+    gpio_intr_disable(BTN_1_GPIO_PIN);
+    gpio_intr_disable(BTN_2_GPIO_PIN);
+    gpio_intr_disable(BTN_3_GPIO_PIN);
+    gpio_intr_disable(BTN_4_GPIO_PIN);
+
+    vTaskDelay(pdMS_TO_TICKS(100));
+
     gpio_config_t io_conf = {
         .pin_bit_mask = 1ULL << BTN_1_GPIO_PIN,
         .mode = GPIO_MODE_INPUT,
         .pull_up_en = GPIO_PULLUP_ENABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_POSEDGE
+        .intr_type = GPIO_INTR_NEGEDGE
     };
     ESP_ERROR_CHECK(gpio_config(&io_conf));
 
@@ -113,13 +120,17 @@ extern void btn_configButtons(void)
     io_conf.pin_bit_mask = 1ULL << BTN_4_GPIO_PIN;
     ESP_ERROR_CHECK(gpio_config(&io_conf));
 
-    // Install ISR service; use IRAM flag so handler runs from IRAM
-    // (GPIO ISR service keeps handlers in IRAM when ESP_INTR_FLAG_IRAM is set)
-    ESP_ERROR_CHECK(gpio_install_isr_service(ESP_INTR_FLAG_IRAM));
     ESP_ERROR_CHECK(gpio_isr_handler_add(BTN_1_GPIO_PIN, btnIsrHndlr, (void*)(intptr_t)BTN_1_GPIO_PIN));
     ESP_ERROR_CHECK(gpio_isr_handler_add(BTN_2_GPIO_PIN, btnIsrHndlr, (void*)(intptr_t)BTN_2_GPIO_PIN));
     ESP_ERROR_CHECK(gpio_isr_handler_add(BTN_3_GPIO_PIN, btnIsrHndlr, (void*)(intptr_t)BTN_3_GPIO_PIN));
     ESP_ERROR_CHECK(gpio_isr_handler_add(BTN_4_GPIO_PIN, btnIsrHndlr, (void*)(intptr_t)BTN_4_GPIO_PIN));
+
+    vTaskDelay(pdMS_TO_TICKS(100));
+
+    gpio_intr_enable(BTN_1_GPIO_PIN);
+    gpio_intr_enable(BTN_2_GPIO_PIN);
+    gpio_intr_enable(BTN_3_GPIO_PIN);
+    gpio_intr_enable(BTN_4_GPIO_PIN);
 
     ESP_LOGI(TAG, "Created buttons");
 }

@@ -63,11 +63,19 @@ void app_main(void)
     OS_dcMotorTaskQueue = xQueueCreate(2, sizeof(ST_dcMotorMsg));
     configASSERT(OS_dcMotorTaskQueue != NULL);
 
+    ESP_LOGI(TAG, "Installing GPIO ISR service");
+    ESP_ERROR_CHECK(gpio_install_isr_service(0));
+    vTaskDelay(pdMS_TO_TICKS(100));
+
     nvs_init();
     
     // Initialize BLE first (PHY callbacks will manage SPI bus suspension/restoration)
     vTaskDelay(pdMS_TO_TICKS(100));
     bluetooth_init();
+    vTaskDelay(pdMS_TO_TICKS(100));
+
+    ESP_LOGI(TAG, "Stopping BLE advertising for triac init");
+    bluetooth_stopAdvertising();
     vTaskDelay(pdMS_TO_TICKS(100));
     
     // Initialize SPI peripherals after BLE (SPI bus is now safe to use)
@@ -81,21 +89,21 @@ void app_main(void)
     vTaskDelay(pdMS_TO_TICKS(100));
     tempSens_suspendTask();
     
-    ESP_LOGI(TAG, "Stopping BLE advertising for triac init");
-    bluetooth_stopAdvertising();
-    vTaskDelay(pdMS_TO_TICKS(100));
-    
     // Initialize remaining peripherals
     btnHndlrs_btnHndlrsInit();
-    btn_configButtons();
     vTaskDelay(pdMS_TO_TICKS(100));
-    triac_triacInit();
-    pid_PIDInit();
     DCMotor_initDcMotors();
     DCMotor_initTask();
     DCMotor_setMiniFanState(true);
     
-    vTaskDelay(pdMS_TO_TICKS(100));
+    // Interrupt initializations
+    vTaskDelay(pdMS_TO_TICKS(200));
+    btn_configButtons();
+    vTaskDelay(pdMS_TO_TICKS(200));
+    triac_triacInit();
+    pid_PIDInit();
+
+    vTaskDelay(pdMS_TO_TICKS(200));
     ESP_LOGI(TAG, "Restarting BLE advertising");
     bluetooth_startAdvertising();
 
@@ -107,7 +115,7 @@ void app_main(void)
     xTaskCreatePinnedToCore(btnHndlrs_task, "btnHndlrsTask", 8192, NULL, configMAX_PRIORITIES - 1, NULL, 1);
     xTaskCreatePinnedToCore(bluetooth_task, "bluetoothTask", 8192, NULL, configMAX_PRIORITIES - 2, NULL, 1);
     xTaskCreatePinnedToCore(tempSens_task, "tempSensTask", 4096, NULL, configMAX_PRIORITIES - 3, &OS_tempSensTaskHandle, 1);
-    xTaskCreatePinnedToCore(DCMotor_task, "dcMotorTask", 4096, NULL, configMAX_PRIORITIES - 4, NULL, 1);
+    xTaskCreatePinnedToCore(DCMotor_task, "dcMotorTask", 2048, NULL, configMAX_PRIORITIES - 4, NULL, 1);
 #endif
 }
 
