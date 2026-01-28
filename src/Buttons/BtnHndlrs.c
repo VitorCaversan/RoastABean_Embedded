@@ -131,6 +131,22 @@ static void createConfirmationPopupWithHndlrs(const char *message,
                                               lv_color_t currScrBckgnd);
 
 /**
+ * @defgroup ConnectionEventHandlers Connection event handlers
+ * @brief Handlers for device connection and disconnection events.
+ * 
+ * Functions: handleDeviceConnected(),
+ * handleDeviceDisconnected(),
+ * showConnectionPopup(),
+ * onClickConnectionPopup(),
+ * showAdvertisementPopup
+ */
+static void handleDeviceConnected(const char *deviceName);
+static void handleDeviceDisconnected(void);
+static void showConnectionPopup(const char *deviceName);
+static void onClickConnectionPopup(void);
+static void showAdvertisementPopup(void);
+
+/**
  * @brief Ends roast by stopping the timer and going back to the main menu
  */
 static void endRoast(void);
@@ -168,7 +184,7 @@ extern void btnHndlrs_task(void *arg)
         {
             switch (msg.event)
             {
-                case EXT_EVENT_STOP_ROAST:
+                case EXT_EVENT_STOP_ROAST_CMD:
                     ESP_LOGI(TAG, "Stop roast event received from Bluetooth");
                     if (pid_isCtrlLoopRunning())
                     {
@@ -197,6 +213,19 @@ extern void btnHndlrs_task(void *arg)
                         free(msg.data); // WARNING: This is NECESSARY to avoid memory leak
                         msg.data = NULL;
                     }
+                break;
+                case EXT_EVENT_CONNECTED_TO_DEVICE:
+                    ESP_LOGI(TAG, "Device connected event");
+                    if (msg.data != NULL)
+                    {
+                        handleDeviceConnected((const char *)msg.data);
+                        free(msg.data); // WARNING: This is NECESSARY to avoid memory leak
+                        msg.data = NULL;
+                    }
+                break;
+                case EXT_EVENT_DISCONNECTED_FROM_DEVICE:
+                    ESP_LOGI(TAG, "Device disconnected event");
+                    handleDeviceDisconnected();
                 break;
                 case EXT_EVENT_BTN_1_PRESSED:
                     ESP_LOGI(TAG, "Button 1 pressed");
@@ -341,8 +370,17 @@ static void onSelectMainMenu(void)
 #if NVS_DEBUG
             json_setAllProfilesAsNotSent();
 #endif
-            ESP_LOGI(TAG, "Connecting...");
-            bluetooth_startAdvertising();
+            if (bluetooth_isConnected())
+            {
+                ESP_LOGI(TAG, "Disconnecting...");
+                bluetooth_disconnect(); // NOTE: BLE_GAP_EVENT_DISCONNECT will eventually be triggered
+            }
+            else
+            {
+                ESP_LOGI(TAG, "Connecting...");
+                bluetooth_startAdvertising();
+                showAdvertisementPopup();
+            }
         break;
         default:
             ESP_LOGW(TAG, "Unknown menu option: %d", ui->selectedIndex);
@@ -922,4 +960,70 @@ static void scheduleRoastToStart(uint32_t delaySecs)
 static void onConfirmOrCancelRoastScheduled(void)
 {
     display_hideConfirmationPopup();
+}
+
+static void handleDeviceConnected(const char *deviceName)
+{
+    if (deviceName == NULL) {
+        ESP_LOGW(TAG, "Device connected but no name provided");
+        return;
+    }
+    
+    ESP_LOGI(TAG, "Handling connection for device: %s", deviceName);
+    
+    showConnectionPopup(deviceName);
+
+    const char *menuLabels[] = {
+        "Roast",
+        "Manage Roast Curves",
+        "Disconnect"
+    };
+    display_showMainMenu(menuLabels, 3);
+}
+
+static void handleDeviceDisconnected(void)
+{
+    ESP_LOGI(TAG, "Handling device disconnection");
+    
+
+    const char *menuLabels[] = {
+        "Roast",
+        "Manage Roast Curves",
+        "Connect"
+    };
+    display_showMainMenu(menuLabels, 3);
+}
+
+static void showConnectionPopup(const char *deviceName)
+{
+    char message[128] = {0};
+    snprintf(message, sizeof(message), "Connected to device:\n%s", deviceName);
+    
+    createConfirmationPopupWithHndlrs(message,
+                                      onClickConnectionPopup,
+                                      onClickConnectionPopup,
+                                      lv_color_black());
+}
+
+static void onClickConnectionPopup(void)
+{
+    display_hideConfirmationPopup();
+
+    setBtnsCallbacks(NULL,
+                     moveSelectionUpMainMenu,
+                     moveSelectionDownMainMenu,
+                     onSelectMainMenu);
+
+    display_showMainMenu(NULL, 0);
+}
+
+static void showAdvertisementPopup(void)
+{
+    char message[128] = {0};
+    snprintf(message, sizeof(message), "Advertising for connections...\nName: %s", BLE_DEVICE_NAME);
+    
+    createConfirmationPopupWithHndlrs(message,
+                                      onClickConnectionPopup,
+                                      onClickConnectionPopup,
+                                      lv_color_black());
 }

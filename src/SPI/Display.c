@@ -103,12 +103,6 @@ static ST_VerticalMenuUi mainMenuUi = {0};
 static ST_VerticalMenuUi selectRoastMenuUi = {0};
 static ST_PopupUi confirmationPopupUi = {0};
 
-static const char *menuLabels[] = {
-    "Roast",
-    "Manage Roast Curves",
-    "Connect"
-};
-
 /*******************************************************************************
  * EXTERNAL FUNCTIONS
  ******************************************************************************/
@@ -563,6 +557,12 @@ extern void display_updateRoastChart(float currTargetTemp, uint32_t elapsedSecs,
 
 extern void display_createMainMenu()
 {
+    const char *menuLabels[] = {
+        "Roast",
+        "Manage Roast Curves",
+        "Connect"
+    };
+    
     createVerticalMenuUi(&mainMenuUi, "Main Menu", menuLabels, MAIN_MENU_OPTION_COUNT);
 }
 

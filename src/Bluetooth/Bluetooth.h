@@ -64,6 +64,14 @@ extern void bluetooth_startAdvertising(void);
 extern void bluetooth_stopAdvertising(void);
 
 /**
+ * @brief Disconnect from the currently connected device
+ * 
+ * Terminates the active BLE connection if one exists.
+ * Does nothing if no device is connected.
+ */
+extern void bluetooth_disconnect(void);
+
+/**
  * @brief Check if a device is connected
  * 
  * @return true if connected, false otherwise

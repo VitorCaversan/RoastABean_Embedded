@@ -21,6 +21,23 @@ static int gattCharAccessCb(uint16_t conn_handle, uint16_t attr_handle,
                             struct ble_gatt_access_ctxt *ctxt, void *arg);
 
 /**
+ * @brief Get the peer device name from a BLE connection
+ * 
+ * @param conn_handle Connection handle
+ * @param deviceName Buffer to store the device name
+ * @param maxLen Maximum length of the buffer
+ * @return true if device name was retrieved, false otherwise
+ */
+static bool getPeerDeviceName(uint16_t conn_handle, char *deviceName, size_t maxLen);
+
+/**
+ * @brief Send connection notification to button handlers
+ * 
+ * @param conn_handle Connection handle to get device info from
+ */
+static void notifyConnectionToUI(uint16_t conn_handle);
+
+/**
  * @brief Checks is entire payload is received and treats it if so
  * 
  * @param data Pointer to received data
@@ -104,9 +121,18 @@ extern void bluetooth_task(void *arg)
             {
                 case BLE_EVENT_CONNECTED:
                     ESP_LOGI(TAG, "Device connected");
+                    vTaskDelay(pdMS_TO_TICKS(200));
+                    notifyConnectionToUI(connHandle);
                 break;
                 case BLE_EVENT_DISCONNECTED:
                     ESP_LOGI(TAG, "Device disconnected");
+                    if (OS_btnHndlrsTaskQueue != NULL) {
+                        ST_extEventMsg msg = {
+                            .event = EXT_EVENT_DISCONNECTED_FROM_DEVICE,
+                            .data = NULL
+                        };
+                        xQueueSend(OS_btnHndlrsTaskQueue, &msg, 0);
+                    }
                 break;
                 case BLE_EVENT_DATA_RECEIVED:
                     ESP_LOGI(TAG, "Data received over BLE, length: %d bytes", msg.dataLen);
@@ -220,6 +246,23 @@ extern void bluetooth_stopAdvertising(void)
     ESP_LOGI(TAG, "Advertising stopped");
 }
 
+extern void bluetooth_disconnect(void)
+{
+    if (isConnected && connHandle != 0)
+    {
+        ESP_LOGI(TAG, "Disconnecting from device (handle: %d)", connHandle);
+        int rc = ble_gap_terminate(connHandle, BLE_ERR_REM_USER_CONN_TERM);
+        if (rc != 0)
+        {
+            ESP_LOGE(TAG, "Failed to disconnect: error %d", rc);
+        }
+    }
+    else
+    {
+        ESP_LOGW(TAG, "No active connection to disconnect");
+    }
+}
+
 extern bool bluetooth_isConnected(void)
 {
     return isConnected;
@@ -280,6 +323,55 @@ static void onSync(void)
 static void onReset(int reason)
 {
     ESP_LOGE(TAG, "BLE Host reset, reason: %d", reason);
+}
+
+static bool getPeerDeviceName(uint16_t conn_handle, char *deviceName, size_t maxLen)
+{
+    if (deviceName == NULL || maxLen == 0) {
+        return false;
+    }
+    
+    struct ble_gap_conn_desc desc;
+    int rc = ble_gap_conn_find(conn_handle, &desc);
+    
+    if (rc != 0) {
+        ESP_LOGW(TAG, "Failed to get connection descriptor: %d", rc);
+        snprintf(deviceName, maxLen, "Unknown Device");
+        return false;
+    }
+    
+    // Try to get peer device name from the address
+    // For now, format the address as a fallback
+    snprintf(deviceName, maxLen, "%02X:%02X:%02X:%02X:%02X:%02X",
+             desc.peer_id_addr.val[5], desc.peer_id_addr.val[4],
+             desc.peer_id_addr.val[3], desc.peer_id_addr.val[2],
+             desc.peer_id_addr.val[1], desc.peer_id_addr.val[0]);
+    
+    return true;
+}
+
+static void notifyConnectionToUI(uint16_t conn_handle)
+{
+    char *deviceName = (char *)malloc(32);
+    if (deviceName == NULL) {
+        ESP_LOGE(TAG, "Failed to allocate memory for device name");
+        return;
+    }
+    
+    getPeerDeviceName(conn_handle, deviceName, 32);
+    
+    if (OS_btnHndlrsTaskQueue != NULL) {
+        ST_extEventMsg msg = {
+            .event = EXT_EVENT_CONNECTED_TO_DEVICE,
+            .data = (void *)deviceName
+        };
+        if (xQueueSend(OS_btnHndlrsTaskQueue, &msg, 0) != pdTRUE) {
+            ESP_LOGW(TAG, "Failed to send connection event to UI");
+            free(deviceName);
+        }
+    } else {
+        free(deviceName);
+    }
 }
 
 static int gapEvent(struct ble_gap_event *event, void *arg)
@@ -476,7 +568,7 @@ static bool treatReceivedJson(const uint8_t *data, uint16_t len)
                     
                     // Send stop roast event to button handlers task
                     ST_extEventMsg msg = {
-                        .event = EXT_EVENT_STOP_ROAST,
+                        .event = EXT_EVENT_STOP_ROAST_CMD,
                         .data = NULL
                     };
                     
