@@ -140,7 +140,13 @@ extern void bluetooth_task(void *arg)
                     treatReceivedPayload(receivedData, msg.dataLen);
                 break;
                 case BLE_EVENT_SEND_PENDING_FEEDBACK:
-                    vTaskDelay(pdMS_TO_TICKS(3000));
+                    ESP_LOGI(TAG, "Waiting for connection to stabilize...");
+                    vTaskDelay(pdMS_TO_TICKS(4000));
+                    if (!isConnected) {
+                        ESP_LOGW(TAG, "Connection lost, skipping feedback");
+                        break;
+                    }
+                    
                     ESP_LOGI(TAG, "Sending pending feedback");
                     bluetooth_sendPendingFeedback();
                 break;
@@ -391,12 +397,6 @@ static int gapEvent(struct ble_gap_event *event, void *arg)
                     ST_bleMsg msg = {.event = BLE_EVENT_CONNECTED, .dataLen = 0};
                     xQueueSend(OS_bleEventQueue, &msg, 0);
                 }
-                
-                // Send pending feedback event to be handled in bluetooth_task context (with larger stack)
-                if (OS_bleEventQueue != NULL) {
-                    ST_bleMsg msg = {.event = BLE_EVENT_SEND_PENDING_FEEDBACK, .dataLen = 0};
-                    xQueueSend(OS_bleEventQueue, &msg, 0);
-                }
             } else {
                 // Connection failed, resume advertising
                 bluetooth_startAdvertising();
@@ -423,6 +423,11 @@ static int gapEvent(struct ble_gap_event *event, void *arg)
         case BLE_GAP_EVENT_MTU:
             ESP_LOGI(TAG, "MTU update event; conn_handle=%d mtu=%d",
                      event->mtu.conn_handle, event->mtu.value);
+            
+            if (OS_bleEventQueue != NULL) {
+                ST_bleMsg msg = {.event = BLE_EVENT_SEND_PENDING_FEEDBACK, .dataLen = 0};
+                xQueueSend(OS_bleEventQueue, &msg, 0);
+            }
             break;
             
         default:
@@ -686,8 +691,17 @@ extern void bluetooth_sendPendingFeedback(void)
     uint8_t profileCount = nvs_getProfileCount();
     ESP_LOGI(TAG, "Found %d stored profiles", profileCount);
     
+    if (profileCount == 0) {
+        ESP_LOGI(TAG, "No profiles to check");
+        return;
+    }
+    
     for (uint8_t i = 0; i < profileCount; i++)
     {
+        if (!isConnected) {
+            ESP_LOGW(TAG, "Connection lost during feedback send");
+            return;
+        }
         // Load profile from NVS
         char *buffer = calloc(NVS_MAX_PROFILE_SIZE, sizeof(char));
         if (buffer == NULL) {

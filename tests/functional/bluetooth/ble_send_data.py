@@ -81,6 +81,15 @@ async def send_json_data(address: str, json_data: dict, chunk_size: int = 244):
     print(f"\nJSON size: {len(json_bytes)} bytes")
     print(f"JSON preview: {json_string[:100]}...")
     
+    # Notification handler for receiving data from ESP32
+    def notification_handler(sender, data):
+        """Called when ESP32 sends data via TX characteristic"""
+        try:
+            decoded = data.decode('utf-8')
+            print(f"\n📥 Received from ESP32: {decoded}")
+        except UnicodeDecodeError:
+            print(f"\n📥 Received raw data ({len(data)} bytes): {data.hex()}")
+    
     async with BleakClient(address) as client:
         print(f"\n✓ Connected to {address}")
         
@@ -97,6 +106,10 @@ async def send_json_data(address: str, json_data: dict, chunk_size: int = 244):
         # Get MTU size
         mtu = client.mtu_size
         print(f"✓ MTU size: {mtu} bytes")
+        
+        # Enable notifications for receiving data from ESP32
+        await client.start_notify(NUS_TX_CHAR_UUID, notification_handler)
+        print("✓ Notifications enabled for receiving data")
         
         # Adjust chunk size based on MTU (leave 3 bytes for ATT overhead)
         actual_chunk_size = min(chunk_size, mtu - 3)
@@ -119,8 +132,19 @@ async def send_json_data(address: str, json_data: dict, chunk_size: int = 244):
         
         print(f"\n✓ Successfully sent {len(json_bytes)} bytes")
         
-        # Wait a bit for ESP32 to process
-        await asyncio.sleep(0.5)
+        # Keep connection alive and listen for data
+        print("\n" + "="*60)
+        print("📡 Connection active - listening for data from ESP32")
+        print("   Press Ctrl+C to disconnect")
+        print("="*60 + "\n")
+        
+        try:
+            # Keep the connection alive indefinitely
+            while True:
+                await asyncio.sleep(1)
+        except KeyboardInterrupt:
+            print("\n\n🔌 Disconnecting...")
+            await client.stop_notify(NUS_TX_CHAR_UUID)
         
         return True
 
@@ -181,15 +205,13 @@ Examples:
         # Default test data from your example
         json_data = {
             "temperatures": [
-                0, 171, 144, 215, 265, 284, 232, 263, 269, 285, 225, 285,
-                218, 173, 285, 240, 215, 206, 236, 281, 232, 212, 285, 285,
-                274, 218, 247, 285, 200, 231, 285
+                0, 50
             ],
-            "pointsQuantity": 31,
+            "pointsQuantity": 2,
             "isScheduled": False,
             "scheduledTime": "2026-01-10T18:25:00.000Z",
             "currentTime": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
-            "curveName": "teste novo"
+            "curveName": "teste smol"
         }
     
     # Scan and let user select device

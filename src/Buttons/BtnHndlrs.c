@@ -150,6 +150,7 @@ static void showAdvertisementPopup(void);
  * @brief Ends roast by stopping the timer and going back to the main menu
  */
 static void endRoast(void);
+
 /**
  * @brief Keeps the axle motor and fan on for specified seconds
  * 
@@ -790,21 +791,56 @@ static void endRoast(void)
         printf("%.2f\n", selectedChart->achievedProfile[i]);
     }
 
-    // Mark feedback as not sent before saving
-    selectedChart->isFeedbackSent = false;
-    
     char *buffer = calloc(NVS_MAX_PROFILE_SIZE, sizeof(char));
     if (buffer == NULL)
     {
         ESP_LOGE(TAG, "Failed to allocate memory for JSON buffer");
     }
+
+    if (bluetooth_isConnected())
+    {
+        if (buffer != NULL)
+        {
+            if (json_generateFeedbackJson(selectedChart, buffer, NVS_MAX_PROFILE_SIZE))
+            {
+                int result = bluetooth_sendData((uint8_t *)buffer, strlen(buffer));
+                if (result == 0)
+                {
+                    ESP_LOGI(TAG, "Feedback sent via BLE");
+                    selectedChart->isFeedbackSent = true;
+                }
+                else
+                {
+                    ESP_LOGE(TAG, "Failed to send feedback: %d", result);
+                    selectedChart->isFeedbackSent = false;
+                }
+            }
+            else
+            {
+                ESP_LOGE(TAG, "Failed to generate feedback JSON");
+                selectedChart->isFeedbackSent = false;
+            }
+        }
+        else
+        {
+            ESP_LOGE(TAG, "Failed to allocate memory for feedback JSON");
+            selectedChart->isFeedbackSent = false;
+        }
+    }
     else
     {
+        selectedChart->isFeedbackSent = false;
+    }
+    
+    if (buffer != NULL)
+    {
+        memset(buffer, 0, NVS_MAX_PROFILE_SIZE);
         ESP_LOGI(TAG, "Saving roast profile to NVS selectedChart index %d", ui->selectedIndex);
         json_storedChartToJson(selectedChart, buffer, NVS_MAX_PROFILE_SIZE);
         ESP_LOGI(TAG, "Roast profile JSON: %s", buffer);
         nvs_saveRoastProfile(ui->selectedIndex, buffer, strlen(buffer));
     }
+
     free(buffer);
 
     setBtnsCallbacks(NULL,
