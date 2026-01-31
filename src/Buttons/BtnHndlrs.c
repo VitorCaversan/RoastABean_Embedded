@@ -742,7 +742,24 @@ static void onConfirmEndRoast(void)
                      moveSelectionDownMainMenu,
                      onSelectMainMenu);
 
-    display_showMainMenu(NULL, 0);
+    if (bluetooth_isConnected())
+    {
+        const char *menuLabels[] = {
+            "Roast",
+            "Manage Roast Curves",
+            "Disconnect"
+        };
+        display_showMainMenu(menuLabels, 3);
+    }
+    else
+    {
+        const char *menuLabels[] = {
+            "Roast",
+            "Manage Roast Curves",
+            "Connect"
+        };
+        display_showMainMenu(menuLabels, 3);
+    }
 }
 
 static void onCancelEndRoast(void)
@@ -1004,14 +1021,17 @@ static void handleDeviceConnected(const char *deviceName)
     
     ESP_LOGI(TAG, "Handling connection for device: %s", deviceName);
     
-    showConnectionPopup(deviceName);
+    if (!pid_isCtrlLoopRunning())
+    {
+        showConnectionPopup(deviceName);
 
-    const char *menuLabels[] = {
-        "Roast",
-        "Manage Roast Curves",
-        "Disconnect"
-    };
-    display_showMainMenu(menuLabels, 3);
+        const char *menuLabels[] = {
+            "Roast",
+            "Manage Roast Curves",
+            "Disconnect"
+        };
+        display_showMainMenu(menuLabels, 3);
+    }
 }
 
 static void handleDeviceDisconnected(void)
@@ -1019,12 +1039,15 @@ static void handleDeviceDisconnected(void)
     ESP_LOGI(TAG, "Handling device disconnection");
     
 
-    const char *menuLabels[] = {
-        "Roast",
-        "Manage Roast Curves",
-        "Connect"
-    };
-    display_showMainMenu(menuLabels, 3);
+    if (!pid_isCtrlLoopRunning())
+    {
+        const char *menuLabels[] = {
+            "Roast",
+            "Manage Roast Curves",
+            "Connect"
+        };
+        display_showMainMenu(menuLabels, 3);
+    }
 }
 
 static void showConnectionPopup(const char *deviceName)
