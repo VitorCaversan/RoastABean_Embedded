@@ -594,7 +594,7 @@ static void onConfirmStartRoast(void)
     pid_ctrlLoopStart(selectedChart->tempProfile, (selectedChart->totalPoints - 1));
     ESP_LOGI(TAG, "PID control loop started");
 
-    DCMotor_rampSpeed(TB_BOARD_1, MOTOR_A, 0, DISC_ROTATION_PWM, DISC_ROTATION_STEP, false);
+    DCMotor_rampSpeed(TB_BOARD_1, MOTOR_A, DISC_ROTATION_PWM, DISC_ROTATION_STEP, false);
     ESP_LOGI(TAG, "Axle motor started");
 }
 
@@ -769,9 +769,7 @@ static void endRoast(void)
     ST_motorControlContext *motorCtrlCtx = DCMotor_getContextFromMotor(TB_BOARD_2);
 
     tb6612_setSpeed(&motorCtrlCtx->motor, MOTOR_A, 100);
-
     vTaskDelay(pdMS_TO_TICKS(500));
-
     tb6612_setSpeed(&motorCtrlCtx->motor, MOTOR_A, 0);
 
     keepDiscMotorAndTriacOnForSeconds(30);
@@ -855,8 +853,7 @@ static void keepDiscMotorAndTriacOnForSeconds(uint32_t seconds)
 {
     ESP_LOGI(TAG, "Keeping axle motor and fan on for %u seconds", seconds);
 
-    ST_motorControlContext *motorCtrlCtx = DCMotor_getContextFromMotor(TB_BOARD_1);
-    tb6612_setSpeed(&motorCtrlCtx->motor, MOTOR_A, 70.0);
+    DCMotor_rampSpeed(TB_BOARD_1, MOTOR_A, DISC_ROTATION_PWM, DISC_ROTATION_STEP, false);
 
     triac_setState(true);
     triac_setPwrPercent(90.0f);
@@ -875,7 +872,7 @@ static void turnDiscMotorAndTriacOffCallback(void *arg)
 {
     ESP_LOGI(TAG, "Turning disc motor and triac off after delay");
 
-    DCMotor_rampSpeed(TB_BOARD_1, MOTOR_A, DISC_ROTATION_PWM, 0, DISC_ROTATION_STEP, true);
+    DCMotor_rampSpeed(TB_BOARD_1, MOTOR_A, 0, DISC_ROTATION_STEP, true);
 
     triac_setPwrPercent(0.0f);
     triac_setState(false);

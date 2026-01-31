@@ -25,8 +25,8 @@
 
 #define BDC_MOTOR_MAX_SPEED             400
 
-#define DISC_ROTATION_PWM        70.0f
-#define DISC_ROTATION_STEP       10.0f
+#define DISC_ROTATION_PWM        80.0f
+#define DISC_ROTATION_STEP       20.0f
 /*******************************************************************************
  * TYPEDEFS AND STRUCTURES
  ******************************************************************************/
@@ -59,7 +59,6 @@ typedef struct ST_rampSpeedData
 {
     EN_TbBoard tbBoard;
     EN_tbMotorId motorId;
-    float startingPercent;
     float targetPercent;
     float step;
 } ST_rampSpeedData;
@@ -113,14 +112,12 @@ extern ST_motorControlContext *DCMotor_getContextFromMotor(EN_TbBoard motor);
  * 
  * @param tbBoard The TB board where the motor is connected
  * @param motorId The motor id
- * @param startingPercent Starting point for the ramp
  * @param targetPercent Endpoint for the ramp
  * @param step The steps taken every second
  * @param isFromISR true if called from an ISR context
  */
 extern void DCMotor_rampSpeed(EN_TbBoard tbBoard,
                               EN_tbMotorId motorId,
-                              float startingPercent,
                               float targetPercent,
                               float step,
                               bool isFromISR);

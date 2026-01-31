@@ -14,8 +14,8 @@
 #define K_FF                        10.0f // % per unit of (airFlowRatio - 1)
 #define POW_FF                      1.0f
 
-#define SECONDS_TO_INVERT_DISC_ROTATION 180
-#define SECONDS_TO_REVERT_DISC_ROTATION 30
+#define SECONDS_TO_INVERT_DISC_ROTATION 140
+#define SECONDS_TO_REVERT_DISC_ROTATION 20
 
 /*******************************************************************************
  * LOCAL FUNCTION DECLARATIONS
@@ -195,7 +195,7 @@ static void pidLoopCallback(void *args)
         if ((elapsedSecs % SECONDS_TO_INVERT_DISC_ROTATION) == 0)
         {
             ESP_LOGI(TAG, "Inverting disc rotation direction");
-            DCMotor_rampSpeed(TB_BOARD_1, MOTOR_A, DISC_ROTATION_PWM, -DISC_ROTATION_PWM, DISC_ROTATION_STEP, true);
+            DCMotor_rampSpeed(TB_BOARD_1, MOTOR_A, -DISC_ROTATION_PWM, DISC_ROTATION_STEP, true);
 
             const esp_timer_create_args_t oneshotTimerArgs = {
                 .callback = revertDiscRotationCallback,
@@ -227,7 +227,7 @@ static float getTargetTemperature(ST_pidCtrlContext *ctx, unsigned long usSinceS
 static void revertDiscRotationCallback(void *arg)
 {
     ESP_LOGI(TAG, "Reverting disc rotation direction");
-    DCMotor_rampSpeed(TB_BOARD_1, MOTOR_A, -DISC_ROTATION_PWM, DISC_ROTATION_PWM, DISC_ROTATION_STEP, true);
+    DCMotor_rampSpeed(TB_BOARD_1, MOTOR_A, DISC_ROTATION_PWM, DISC_ROTATION_STEP, true);
 
     esp_timer_handle_t* timer_ptr = (esp_timer_handle_t*)arg;
     if (timer_ptr && *timer_ptr)

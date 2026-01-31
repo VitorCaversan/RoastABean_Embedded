@@ -52,13 +52,11 @@ static void turnFansOffCallback(void *arg);
  * 
  * @param tbBoard The TB board where the motor is connected
  * @param motorId The motor id
- * @param startingPercent Starting point for the ramp
  * @param targetPercent Endpoint for the ramp
  * @param step The steps taken every 200ms
  */
 static void rampSpeed(EN_TbBoard tbBoard,
                       EN_tbMotorId motorId,
-                      float startingPercent,
                       float targetPercent,
                       float step);
 
@@ -87,13 +85,12 @@ extern void DCMotor_task(void *arg)
                     {
                         ST_rampSpeedData *rampData = (ST_rampSpeedData *)msg.data;
                         
-                        ESP_LOGI(TAG, "Ramping motor speed - Board: %d, Motor: %d, Start: %.2f%%, Target: %.2f%%, Step: %.2f%%",
-                                rampData->tbBoard, rampData->motorId, rampData->startingPercent,
+                        ESP_LOGI(TAG, "Ramping motor speed - Board: %d, Motor: %d, Target: %.2f%%, Step: %.2f%%",
+                                rampData->tbBoard, rampData->motorId,
                                 rampData->targetPercent, rampData->step);
                         
                         rampSpeed(rampData->tbBoard,
                                     rampData->motorId,
-                                    rampData->startingPercent,
                                     rampData->targetPercent,
                                     rampData->step);
                         
@@ -242,7 +239,6 @@ extern ST_motorControlContext *DCMotor_getContextFromMotor(EN_TbBoard motor)
 
 extern void DCMotor_rampSpeed(EN_TbBoard tbBoard,
                               EN_tbMotorId motorId,
-                              float startingPercent,
                               float targetPercent,
                               float step,
                               bool isFromISR)
@@ -256,7 +252,6 @@ extern void DCMotor_rampSpeed(EN_TbBoard tbBoard,
 
     rampData->tbBoard = tbBoard;
     rampData->motorId = motorId;
-    rampData->startingPercent = startingPercent;
     rampData->targetPercent = targetPercent;
     rampData->step = step;
 
@@ -367,11 +362,10 @@ static void turnFansOffCallback(void *arg)
 
 static void rampSpeed(EN_TbBoard tbBoard,
                       EN_tbMotorId motorId,
-                      float startingPercent,
                       float targetPercent,
                       float step)
 {
-    static float prevEndPercent = -1.0f;
+    static float prevEndPercent = 0.0f;
     
     if ((step > 100.0f) || (step <= 0.0f))
     {
@@ -381,27 +375,20 @@ static void rampSpeed(EN_TbBoard tbBoard,
 
     ST_motorControlContext *motorCtx = DCMotor_getContextFromMotor(tbBoard);
 
-    // If they are of opposing signs, start from 0
-    if (fabsf(prevEndPercent - startingPercent) > fabsf(prevEndPercent))
+    if (prevEndPercent > targetPercent)
     {
-        tb6612_setSpeed(&motorCtx->motor, motorId, 0.0f);
-        vTaskDelay(pdMS_TO_TICKS(200));
-    }
-
-    if (startingPercent > targetPercent)
-    {
-        for (; startingPercent >= targetPercent; startingPercent -= step)
+        for (; prevEndPercent >= targetPercent; prevEndPercent -= step)
         {
-            tb6612_setSpeed(&motorCtx->motor, motorId, startingPercent);
+            tb6612_setSpeed(&motorCtx->motor, motorId, prevEndPercent);
         
             vTaskDelay(pdMS_TO_TICKS(200));
         }
     }
     else
     {
-        for (; startingPercent <= targetPercent; startingPercent += step)
+        for (; prevEndPercent <= targetPercent; prevEndPercent += step)
         {
-            tb6612_setSpeed(&motorCtx->motor, motorId, startingPercent);
+            tb6612_setSpeed(&motorCtx->motor, motorId, prevEndPercent);
         
             vTaskDelay(pdMS_TO_TICKS(200));
         }
