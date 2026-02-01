@@ -380,6 +380,11 @@ static void rampSpeed(EN_TbBoard tbBoard,
         for (; prevEndPercent >= targetPercent; prevEndPercent -= step)
         {
             tb6612_setSpeed(&motorCtx->motor, motorId, prevEndPercent);
+
+            if (fabsf(prevEndPercent) < fabsf(step))
+            {
+                prevEndPercent -= step; // A higher step when near  zero
+            }
         
             vTaskDelay(pdMS_TO_TICKS(200));
         }
@@ -389,6 +394,11 @@ static void rampSpeed(EN_TbBoard tbBoard,
         for (; prevEndPercent <= targetPercent; prevEndPercent += step)
         {
             tb6612_setSpeed(&motorCtx->motor, motorId, prevEndPercent);
+
+            if (fabsf(prevEndPercent) < fabsf(step))
+            {
+                prevEndPercent += step; // A higher step when near  zero
+            }
         
             vTaskDelay(pdMS_TO_TICKS(200));
         }

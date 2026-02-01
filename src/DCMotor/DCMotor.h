@@ -25,8 +25,9 @@
 
 #define BDC_MOTOR_MAX_SPEED             400
 
-#define DISC_ROTATION_PWM        80.0f
-#define DISC_ROTATION_STEP       20.0f
+#define COMMON_DISC_ROTATION_PWM    80.0f
+#define REVERSE_DISC_ROTATION_PWM   90.0f
+#define DISC_ROTATION_STEP          20.0f
 /*******************************************************************************
  * TYPEDEFS AND STRUCTURES
  ******************************************************************************/

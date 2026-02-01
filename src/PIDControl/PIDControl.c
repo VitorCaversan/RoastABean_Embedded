@@ -14,8 +14,8 @@
 #define K_FF                        10.0f // % per unit of (airFlowRatio - 1)
 #define POW_FF                      1.0f
 
-#define SECONDS_TO_INVERT_DISC_ROTATION 140
-#define SECONDS_TO_REVERT_DISC_ROTATION 20
+#define SECONDS_TO_INVERT_DISC_ROTATION 135
+#define SECONDS_TO_REVERT_DISC_ROTATION 15
 
 /*******************************************************************************
  * LOCAL FUNCTION DECLARATIONS
@@ -151,8 +151,9 @@ static void pidLoopCallback(void *args)
 
     unsigned long nowUs = esp_timer_get_time();
     unsigned long elapsedUs = (nowUs - ctx->startingProcessUs);
+    unsigned long elapsedSecs = US_TO_SECONDS(elapsedUs);
     float targetTemp = getTargetTemperature(ctx, elapsedUs);
-    ESP_LOGI(TAG, "PID Loop: CurrTemp=%.2f °C, TargetTemp=%.2f °C", currTemp, targetTemp);
+    ESP_LOGI(TAG, "PID Loop: CurrTemp=%.2f °C, TargetTemp=%.2f °C, ElapsedSecs=%lu", currTemp, targetTemp, elapsedSecs);
     float error = targetTemp - currTemp;
     
     float newPwrPercent = 0.0f;
@@ -165,13 +166,12 @@ static void pidLoopCallback(void *args)
 
     ST_extEventMsg screenMsg = {0};
 
-    unsigned long elapsedSecs = US_TO_SECONDS(elapsedUs);
     if (elapsedSecs != prevElapsedSecs) // Send every second
     {
         prevElapsedSecs = elapsedSecs;
         
         chartUpdateData.currTargetTemp = targetTemp;
-        chartUpdateData.elapsedSecs = US_TO_SECONDS(nowUs - ctx->startingProcessUs);
+        chartUpdateData.elapsedSecs = elapsedSecs;
         chartUpdateData.currentTemp = currTemp;
     
         screenMsg.event = EXT_EVENT_UPDATE_CHART;
@@ -195,7 +195,7 @@ static void pidLoopCallback(void *args)
         if ((elapsedSecs % SECONDS_TO_INVERT_DISC_ROTATION) == 0)
         {
             ESP_LOGI(TAG, "Inverting disc rotation direction");
-            DCMotor_rampSpeed(TB_BOARD_1, MOTOR_A, -DISC_ROTATION_PWM, DISC_ROTATION_STEP, true);
+            DCMotor_rampSpeed(TB_BOARD_1, MOTOR_A, -REVERSE_DISC_ROTATION_PWM, DISC_ROTATION_STEP, true);
 
             const esp_timer_create_args_t oneshotTimerArgs = {
                 .callback = revertDiscRotationCallback,
@@ -227,7 +227,7 @@ static float getTargetTemperature(ST_pidCtrlContext *ctx, unsigned long usSinceS
 static void revertDiscRotationCallback(void *arg)
 {
     ESP_LOGI(TAG, "Reverting disc rotation direction");
-    DCMotor_rampSpeed(TB_BOARD_1, MOTOR_A, DISC_ROTATION_PWM, DISC_ROTATION_STEP, true);
+    DCMotor_rampSpeed(TB_BOARD_1, MOTOR_A, COMMON_DISC_ROTATION_PWM, DISC_ROTATION_STEP, true);
 
     esp_timer_handle_t* timer_ptr = (esp_timer_handle_t*)arg;
     if (timer_ptr && *timer_ptr)

@@ -594,7 +594,7 @@ static void onConfirmStartRoast(void)
     pid_ctrlLoopStart(selectedChart->tempProfile, (selectedChart->totalPoints - 1));
     ESP_LOGI(TAG, "PID control loop started");
 
-    DCMotor_rampSpeed(TB_BOARD_1, MOTOR_A, DISC_ROTATION_PWM, DISC_ROTATION_STEP, false);
+    DCMotor_rampSpeed(TB_BOARD_1, MOTOR_A, COMMON_DISC_ROTATION_PWM, DISC_ROTATION_STEP, false);
     ESP_LOGI(TAG, "Axle motor started");
 }
 
@@ -870,7 +870,7 @@ static void keepDiscMotorAndTriacOnForSeconds(uint32_t seconds)
 {
     ESP_LOGI(TAG, "Keeping axle motor and fan on for %u seconds", seconds);
 
-    DCMotor_rampSpeed(TB_BOARD_1, MOTOR_A, DISC_ROTATION_PWM, DISC_ROTATION_STEP, false);
+    DCMotor_rampSpeed(TB_BOARD_1, MOTOR_A, COMMON_DISC_ROTATION_PWM, DISC_ROTATION_STEP, false);
 
     triac_setState(true);
     triac_setPwrPercent(90.0f);
